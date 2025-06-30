@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../theme/app_theme.dart';
 
 class NewFriendsPage extends StatelessWidget {
   const NewFriendsPage({super.key});
@@ -88,7 +89,7 @@ class NewFriendsPage extends StatelessWidget {
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
             ),
             child: const Text('接受'),

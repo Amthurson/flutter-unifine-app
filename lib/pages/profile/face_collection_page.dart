@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../theme/app_theme.dart';
 
 class FaceCollectionPage extends StatefulWidget {
   const FaceCollectionPage({super.key});
@@ -88,7 +89,7 @@ class _FaceCollectionPageState extends State<FaceCollectionPage> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _startFaceCollection,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                 ),
                 child: _isLoading

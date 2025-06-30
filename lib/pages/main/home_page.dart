@@ -1,8 +1,10 @@
-import 'package:flutter/foundation.dart';
+// lib/pages/main/home_page.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:unified_front_end/theme/app_theme.dart';
+import '../../widgets/compatible_webview.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,112 +14,29 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late WebViewController _webViewController;
-  int _currentIndex = 0;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            // 更新加载进度
-          },
-          onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              _isLoading = false;
-            });
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse('https://www.baidu.com'));
-
-    // web/pc端自动用url_launcher打开
-    if (kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      _launchWebUrl();
-    }
-  }
-
-  Future<void> _launchWebUrl() async {
-    final url = Uri.parse('https://www.baidu.com');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('华新燃气')),
-        body: const Center(child: Text('已在浏览器中打开服务平台，请在新窗口操作。')),
-      );
-    }
-    if (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('华新燃气'),
-          backgroundColor: const Color(0xFF1976D2),
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.message),
-              onPressed: () => context.push('/im-messages'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.person),
-              onPressed: () => _showProfileMenu(context),
-            ),
-          ],
-        ),
-        drawer: _buildDrawer(),
-        body: Stack(
-          children: [
-            WebViewWidget(controller: _webViewController),
-            if (_isLoading) const Center(child: CircularProgressIndicator()),
-          ],
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-            _navigateToPage(index);
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF1976D2),
-          unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
-            BottomNavigationBarItem(icon: Icon(Icons.contacts), label: '通讯录'),
-            BottomNavigationBarItem(icon: Icon(Icons.message), label: '消息'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
-          ],
-        ),
-      );
-    }
-    // 其它平台
     return Scaffold(
-      appBar: AppBar(title: const Text('华新燃气')),
-      body: const Center(
-        child: Text('当前平台暂不支持WebView，请在Android、iOS、Windows或Mac上体验。'),
+      appBar: AppBar(
+        title: const Text('华新燃气'),
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.message),
+            color: Colors.white,
+            onPressed: () => context.push('/im-messages'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            color: Colors.white,
+            onPressed: () => _showProfileMenu(context),
+          ),
+        ],
       ),
+      drawer: _buildDrawer(),
+      body: CompatibleWebView(url: 'https://www.baidu.com', title: '华新燃气'),
     );
   }
 
@@ -127,17 +46,21 @@ class _HomePageState extends State<HomePage> {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF1976D2)),
+            decoration: const BoxDecoration(color: AppTheme.primaryColor),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const CircleAvatar(
+              children: const [
+                CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: Color(0xFF1976D2)),
+                  child: Icon(
+                    Icons.person,
+                    size: 40,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
+                SizedBox(height: 10),
+                Text(
                   '华新燃气用户',
                   style: TextStyle(
                     color: Colors.white,
@@ -145,7 +68,7 @@ class _HomePageState extends State<HomePage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Text(
+                Text(
                   '138****8888',
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
@@ -157,9 +80,6 @@ class _HomePageState extends State<HomePage> {
             title: const Text('首页'),
             onTap: () {
               Navigator.pop(context);
-              setState(() {
-                _currentIndex = 0;
-              });
             },
           ),
           ListTile(
@@ -249,27 +169,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _navigateToPage(int index) {
-    switch (index) {
-      case 0:
-        // 首页 - 刷新WebView
-        _webViewController.reload();
-        break;
-      case 1:
-        // 通讯录
-        context.push('/contacts');
-        break;
-      case 2:
-        // 消息
-        context.push('/im-messages');
-        break;
-      case 3:
-        // 我的 - 打开抽屉
-        Scaffold.of(context).openDrawer();
-        break;
-    }
-  }
-
   void _showProfileMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -337,55 +236,5 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-}
-
-class CompatibleWebView extends StatefulWidget {
-  final String url;
-
-  const CompatibleWebView({super.key, required this.url});
-
-  @override
-  State<CompatibleWebView> createState() => _CompatibleWebViewState();
-}
-
-class _CompatibleWebViewState extends State<CompatibleWebView> {
-  @override
-  void initState() {
-    super.initState();
-    _autoLaunch();
-  }
-
-  Future<void> _autoLaunch() async {
-    if (kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      final uri = Uri.parse(widget.url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS)) {
-      return Scaffold(
-        appBar: AppBar(title: Text('WebView Page')),
-        body: WebViewWidget(
-          controller: WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..loadRequest(Uri.parse(widget.url)),
-        ),
-      );
-    } else {
-      return Scaffold(
-        appBar: AppBar(title: Text('Open in Browser')),
-        body: Center(child: Text('已在浏览器中打开：${widget.url}')),
-      );
-    }
   }
 }

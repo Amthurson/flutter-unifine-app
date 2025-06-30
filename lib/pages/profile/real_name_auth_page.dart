@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../theme/app_theme.dart';
 
 class RealNameAuthPage extends StatefulWidget {
   const RealNameAuthPage({super.key});
@@ -110,7 +111,7 @@ class _RealNameAuthPageState extends State<RealNameAuthPage> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submitAuth,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                 ),
                 child: _isLoading

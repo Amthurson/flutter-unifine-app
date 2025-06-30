@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../theme/app_theme.dart';
 
 class PasswordLoginPage extends StatefulWidget {
   const PasswordLoginPage({super.key});
@@ -164,14 +165,14 @@ class _PasswordLoginPageState extends State<PasswordLoginPage> {
                         });
                       },
                       shape: const CircleBorder(),
-                      activeColor: Colors.blue,
+                      activeColor: AppTheme.primaryColor,
                     ),
                     const Text('我已阅读并同意'),
                     GestureDetector(
                       onTap: () => context.push('/privacy-policy'),
                       child: const Text(
                         '《个人信息保护指引》',
-                        style: TextStyle(color: Colors.blue),
+                        style: TextStyle(color: AppTheme.primaryColor),
                       ),
                     ),
                   ],
@@ -184,7 +185,7 @@ class _PasswordLoginPageState extends State<PasswordLoginPage> {
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),

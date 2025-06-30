@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../theme/app_theme.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -201,7 +202,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _countdown > 0
                               ? Colors.grey
-                              : Colors.blue,
+                              : AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6),
@@ -282,7 +283,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
 
 class AccountSecurityPage extends StatelessWidget {
   const AccountSecurityPage({super.key});

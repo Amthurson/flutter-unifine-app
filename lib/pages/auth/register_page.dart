@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../theme/app_theme.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -206,7 +207,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _countdown > 0
                               ? Colors.grey
-                              : Colors.blue,
+                              : AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6),
@@ -234,14 +235,14 @@ class _RegisterPageState extends State<RegisterPage> {
                         });
                       },
                       shape: const CircleBorder(),
-                      activeColor: Colors.blue,
+                      activeColor: AppTheme.primaryColor,
                     ),
                     const Text('我已阅读并同意'),
                     GestureDetector(
                       onTap: () => context.push('/privacy-policy'),
                       child: const Text(
                         '《个人信息保护指引》',
-                        style: TextStyle(color: Colors.blue),
+                        style: TextStyle(color: AppTheme.primaryColor),
                       ),
                     ),
                   ],
@@ -254,7 +255,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),

@@ -2,7 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../api/auth_api.dart';
+import '../../providers/user_provider.dart';
+import '../../models/user.dart';
+import '../../utils/encrypt_util.dart';
+import '../../services/user_service.dart';
 
 class VerificationLoginPage extends StatefulWidget {
   const VerificationLoginPage({super.key});
@@ -17,6 +23,13 @@ class _VerificationLoginPageState extends State<VerificationLoginPage> {
   bool _agree = false;
   bool _isLoading = false;
   int _countdown = 0;
+  String? _publicKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPublicKey();
+  }
 
   @override
   void dispose() {
@@ -44,7 +57,7 @@ class _VerificationLoginPageState extends State<VerificationLoginPage> {
     });
   }
 
-  void _getVerificationCode() {
+  void _getVerificationCode() async {
     if (_phoneController.text.isEmpty) {
       Fluttertoast.showToast(msg: '请输入手机号');
       return;
@@ -55,19 +68,32 @@ class _VerificationLoginPageState extends State<VerificationLoginPage> {
       return;
     }
 
-    // 模拟发送验证码
-    Fluttertoast.showToast(msg: '验证码已发送');
-    _startCountdown();
+    try {
+      final publicKey = await AuthApi.getPublicKey();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final encryptedPhone =
+          EncryptUtil.encryptPhone(_phoneController.text, publicKey, timestamp);
+      await AuthApi.sendCodeWithEncrypted(encryptedPhone, publicKey);
+      Fluttertoast.showToast(msg: '验证码已发送');
+      _startCountdown();
+    } catch (e) {
+      print('验证码异常: $e');
+      Fluttertoast.showToast(msg: e.toString());
+    }
   }
 
   void _login() async {
+    print('VerificationLoginPage._login: 开始登录');
     if (_phoneController.text.isEmpty || _codeController.text.isEmpty) {
       Fluttertoast.showToast(msg: '请填写完整信息');
       return;
     }
-
     if (!_agree) {
       Fluttertoast.showToast(msg: '请先同意个人信息保护指引');
+      return;
+    }
+    if (_publicKey == null) {
+      Fluttertoast.showToast(msg: '获取公钥失败，请重试');
       return;
     }
 
@@ -75,16 +101,75 @@ class _VerificationLoginPageState extends State<VerificationLoginPage> {
       _isLoading = true;
     });
 
-    // 模拟登录请求
-    await Future.delayed(const Duration(seconds: 1));
+    final userProvider = context.read<UserProvider>();
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    try {
+      print('VerificationLoginPage._login: 调用API登录');
+      final result = await AuthApi.loginWithPhone(
+        _phoneController.text,
+        _codeController.text,
+        _publicKey!,
+      );
 
-      // 登录成功，跳转到主页
-      context.go('/home');
+      print('VerificationLoginPage._login: API登录成功，结果: $result');
+
+      // 将Map转换为User对象，然后使用全局状态管理处理登录
+      final user = User.fromJson(result);
+      print('VerificationLoginPage._login: 用户对象创建成功: ${user.phone}');
+
+      print('VerificationLoginPage._login: 调用UserProvider.login');
+      await userProvider.login(user);
+      print('VerificationLoginPage._login: UserProvider.login完成');
+
+      if (mounted) {
+        Fluttertoast.showToast(msg: '登录成功');
+        print('VerificationLoginPage._login: 登录成功，准备跳转');
+
+        // 显示登录成功对话框
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('登录成功'),
+            content: const Text('登录成功，即将跳转到主页'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // 根据用户状态决定跳转
+                  if (user.needBindPhone == true) {
+                    print('VerificationLoginPage._login: 需要绑定手机号，跳转到设置密码页面');
+                    context.go('/set-password'); // 跳转设置密码页面
+                  } else {
+                    print('VerificationLoginPage._login: 直接跳转到主页进行测试');
+                    // 直接跳转到主页进行测试
+                    context.go('/home');
+                  }
+                },
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('VerificationLoginPage._login: 登录失败: $e');
+      if (mounted) {
+        Fluttertoast.showToast(msg: e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _fetchPublicKey() async {
+    try {
+      _publicKey = await AuthApi.getPublicKey();
+    } catch (e) {
+      Fluttertoast.showToast(msg: '获取公钥失败');
     }
   }
 

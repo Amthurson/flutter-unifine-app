@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
+import '../utils/navigation_utils.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -13,24 +15,40 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _navigateToNextPage();
+    _initializeApp();
   }
 
-  void _navigateToNextPage() async {
-    // 模拟加载时间
+  Future<void> _initializeApp() async {
+    print('SplashPage._initializeApp: 开始初始化应用');
+    // 延迟2秒显示启动页
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
-      // 检查是否已登录，如果已登录则跳转到主页，否则跳转到登录页
-      // 这里可以根据实际需求修改逻辑
-      context.go('/verification-login');
+      final userProvider = context.read<UserProvider>();
+      print('SplashPage._initializeApp: 获取UserProvider');
+
+      // 初始化用户状态
+      print('SplashPage._initializeApp: 开始初始化用户状态');
+      await userProvider.initializeUser();
+      print(
+          'SplashPage._initializeApp: 用户状态初始化完成，登录状态: ${userProvider.isLoggedIn}');
+
+      // 根据登录状态跳转
+      if (userProvider.isLoggedIn) {
+        print('SplashPage._initializeApp: 用户已登录，使用NavigationUtils进行跳转');
+        // 使用NavigationUtils进行登录成功后的跳转
+        NavigationUtils.jumpMainBridgeActivity(context);
+      } else {
+        print('SplashPage._initializeApp: 用户未登录，跳转到登录页');
+        context.go('/verification-login');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: const Color(0xFFF5F7FA),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -40,44 +58,36 @@ class _SplashPageState extends State<SplashPage> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.blue,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
               ),
               child: const Icon(
-                Icons.local_gas_station,
+                Icons.flutter_dash,
                 size: 60,
-                color: Color(0xFF1976D2),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // 应用名称
-            const Text(
-              '华新燃气',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 10),
-
-            // 应用副标题
+            const SizedBox(height: 24),
             const Text(
-              '智慧燃气服务平台',
-              style: TextStyle(fontSize: 16, color: Colors.white70),
+              '统一前端',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
-            const SizedBox(height: 50),
-
-            // 加载动画
-            const SpinKitFadingCircle(color: Colors.white, size: 40.0),
+            const SizedBox(height: 8),
+            const Text(
+              '欢迎使用',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 48),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
           ],
         ),
       ),

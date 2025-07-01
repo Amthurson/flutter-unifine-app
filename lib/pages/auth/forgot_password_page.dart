@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../theme/app_theme.dart';
+import '../../api/auth_api.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -51,7 +52,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     });
   }
 
-  void _getVerificationCode() {
+  void _getVerificationCode() async {
     if (_phoneController.text.isEmpty) {
       Fluttertoast.showToast(msg: '请输入手机号');
       return;
@@ -63,8 +64,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
 
     // 模拟发送验证码
-    Fluttertoast.showToast(msg: '验证码已发送');
-    _startCountdown();
+    try {
+      final publicKey = await AuthApi.getPublicKey();
+      await AuthApi.sendCode(_phoneController.text, publicKey);
+      Fluttertoast.showToast(msg: '验证码已发送');
+      _startCountdown();
+    } catch (e) {
+      Fluttertoast.showToast(msg: e.toString());
+    }
   }
 
   void _resetPassword() async {

@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.unified_front_end"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     // ndkVersion = flutter.ndkVersion
     ndkVersion = "27.0.12077973"
 
@@ -17,7 +17,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
     defaultConfig {
@@ -25,8 +25,8 @@ android {
         applicationId = "com.example.unified_front_end"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

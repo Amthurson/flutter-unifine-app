@@ -3,8 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:unified_front_end/theme/app_theme.dart';
 import '../../widgets/compatible_webview.dart';
+import '../../providers/user_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,31 +18,39 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('华新燃气'),
-        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.message),
-            color: Colors.white,
-            onPressed: () => context.push('/im-messages'),
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('华新燃气'),
+            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.message),
+                color: Colors.white,
+                onPressed: () => context.push('/im-messages'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.person),
+                color: Colors.white,
+                onPressed: () => _showProfileMenu(context),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.person),
-            color: Colors.white,
-            onPressed: () => _showProfileMenu(context),
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(),
-      body: CompatibleWebView(url: 'https://www.baidu.com', title: '华新燃气'),
+          drawer: _buildDrawer(userProvider),
+          body: CompatibleWebView(
+              url: userProvider.homeUrlInfo?.indexUrl ?? '', title: '华新燃气'),
+        );
+      },
     );
   }
 
-  Widget _buildDrawer() {
+  Widget _buildDrawer(UserProvider userProvider) {
+    final userName = userProvider.userName ?? '用户';
+    final orgName = userProvider.orgName ?? '华新燃气';
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -49,8 +59,8 @@ class _HomePageState extends State<HomePage> {
             decoration: const BoxDecoration(color: AppTheme.primaryColor),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                CircleAvatar(
+              children: [
+                const CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
                   child: Icon(
@@ -59,18 +69,18 @@ class _HomePageState extends State<HomePage> {
                     color: AppTheme.primaryColor,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
-                  '华新燃气用户',
-                  style: TextStyle(
+                  userName,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  '138****8888',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  orgName,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
@@ -227,9 +237,13 @@ class _HomePageState extends State<HomePage> {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              context.go('/verification-login');
+              final userProvider = context.read<UserProvider>();
+              await userProvider.logout();
+              if (mounted) {
+                context.go('/verification-login');
+              }
             },
             child: const Text('确定'),
           ),

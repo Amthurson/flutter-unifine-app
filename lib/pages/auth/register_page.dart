@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../theme/app_theme.dart';
+import '../../api/auth_api.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -47,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-  void _getVerificationCode() {
+  void _getVerificationCode() async {
     if (_phoneController.text.isEmpty) {
       Fluttertoast.showToast(msg: '请输入手机号');
       return;
@@ -58,9 +59,14 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 模拟发送验证码
-    Fluttertoast.showToast(msg: '验证码已发送');
-    _startCountdown();
+    try {
+      final publicKey = await AuthApi.getPublicKey();
+      await AuthApi.sendCode(_phoneController.text, publicKey);
+      Fluttertoast.showToast(msg: '验证码已发送');
+      _startCountdown();
+    } catch (e) {
+      Fluttertoast.showToast(msg: e.toString());
+    }
   }
 
   void _register() async {
@@ -80,16 +86,30 @@ class _RegisterPageState extends State<RegisterPage> {
       _isLoading = true;
     });
 
-    // 模拟注册请求
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // TODO: 实现注册接口
+      // 目前使用登录接口模拟注册
+      final publicKey = await AuthApi.getPublicKey();
+      final result = await AuthApi.loginWithCode(
+        _phoneController.text,
+        _codeController.text,
+        publicKey,
+      );
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      Fluttertoast.showToast(msg: '注册成功');
-      context.go('/home');
+      if (mounted) {
+        Fluttertoast.showToast(msg: '注册成功');
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        Fluttertoast.showToast(msg: e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

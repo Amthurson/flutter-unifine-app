@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../api/auth_api.dart';
+import '../../providers/user_provider.dart';
+import '../../models/user.dart';
+import '../../utils/navigation_utils.dart';
+import '../../services/user_service.dart';
 
 class PasswordLoginPage extends StatefulWidget {
   const PasswordLoginPage({super.key});
@@ -16,6 +22,13 @@ class _PasswordLoginPageState extends State<PasswordLoginPage> {
   bool _agree = false;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _publicKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPublicKey();
+  }
 
   @override
   void dispose() {
@@ -29,9 +42,12 @@ class _PasswordLoginPageState extends State<PasswordLoginPage> {
       Fluttertoast.showToast(msg: '请填写完整信息');
       return;
     }
-
     if (!_agree) {
       Fluttertoast.showToast(msg: '请先同意个人信息保护指引');
+      return;
+    }
+    if (_publicKey == null) {
+      Fluttertoast.showToast(msg: '获取公钥失败，请重试');
       return;
     }
 
@@ -39,16 +55,52 @@ class _PasswordLoginPageState extends State<PasswordLoginPage> {
       _isLoading = true;
     });
 
-    // 模拟登录请求
-    await Future.delayed(const Duration(seconds: 1));
+    final userProvider = context.read<UserProvider>();
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    try {
+      // 使用PasswordLoginApi进行密码登录
+      final result = await PasswordLoginApi.loginWithPassword(
+        _phoneController.text,
+        _passwordController.text,
+        _publicKey!,
+      );
 
-      // 登录成功，跳转到主页
-      context.go('/home');
+      // 将Map转换为User对象，然后使用全局状态管理处理登录
+      final user = User.fromJson(result);
+      await userProvider.login(user);
+
+      if (mounted) {
+        Fluttertoast.showToast(msg: '登录成功');
+
+        // 根据用户状态决定跳转
+        if (user.needBindPhone == true) {
+          context.go('/set-password'); // 跳转设置密码页面
+        } else {
+          // 使用NavigationUtils进行登录成功后的跳转
+          NavigationUtils.jumpMainBridgeActivity(context);
+        }
+      }
+
+      // 1. 登录接口（账号密码/验证码等）成功后，拿到token
+      await UserService.saveUserInfo(result);
+    } catch (e) {
+      if (mounted) {
+        Fluttertoast.showToast(msg: e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _fetchPublicKey() async {
+    try {
+      _publicKey = await AuthApi.getPublicKey();
+    } catch (e) {
+      Fluttertoast.showToast(msg: '获取公钥失败');
     }
   }
 

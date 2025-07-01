@@ -22,6 +22,9 @@ import '../pages/profile/account_security_page.dart';
 import '../pages/profile/set_phone_page.dart';
 import '../pages/profile/set_password_page.dart';
 import '../pages/profile/delete_account_page.dart';
+import '../pages/launch_advert_page.dart';
+import '../pages/platform_select_page.dart';
+import '../pages/web_home_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -74,6 +77,39 @@ class AppRouter {
         path: '/privacy-policy',
         name: 'privacy-policy',
         builder: (context, state) => const PrivacyPolicyPage(),
+      ),
+
+      // 广告/首屏页
+      GoRoute(
+        path: '/launch-advert',
+        name: 'launch-advert',
+        builder: (context, state) => LaunchAdvertPage(
+          windowInfo: state.extra as dynamic,
+        ),
+      ),
+
+      // 平台选择页
+      GoRoute(
+        path: '/platform-select',
+        name: 'platform-select',
+        builder: (context, state) => const PlatformSelectPage(),
+      ),
+
+      // Web主页面
+      GoRoute(
+        path: '/web-home',
+        name: 'web-home',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final uri = Uri.parse(state.uri.toString());
+          final queryParams = uri.queryParameters;
+
+          return WebHomePage(
+            title: extra?['title'] ?? queryParams['title'],
+            url: extra?['url'] ?? queryParams['url'],
+            isHome: extra?['isHome'] ?? (queryParams['isHome'] == 'true'),
+          );
+        },
       ),
 
       // 主页（带导航和侧边栏）

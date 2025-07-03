@@ -62,26 +62,26 @@ class _RealNameAuthPageState extends State<RealNameAuthPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Card(
+            const Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.verified_user,
                       size: 48,
                       color: Colors.blue,
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
+                    SizedBox(height: 16),
+                    Text(
                       '实名认证',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: 8),
+                    Text(
                       '请填写真实身份信息进行认证',
                       style: TextStyle(color: Colors.grey),
                     ),

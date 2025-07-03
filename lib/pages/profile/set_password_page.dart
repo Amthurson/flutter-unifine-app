@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
-import '../../providers/user_provider.dart';
 
 class SetPasswordPage extends StatefulWidget {
   const SetPasswordPage({super.key});

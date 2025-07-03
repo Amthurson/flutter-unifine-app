@@ -43,27 +43,27 @@ class AppTheme {
         fillColor: inputFillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: inputBorderColor),
+          borderSide: const BorderSide(color: inputBorderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: inputBorderColor),
+          borderSide: const BorderSide(color: inputBorderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor),
+          borderSide: const BorderSide(color: primaryColor),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
         ),
-        hintStyle: TextStyle(color: Color(0xFFBFC5D2), fontSize: 16),
+        hintStyle: const TextStyle(color: Color(0xFFBFC5D2), fontSize: 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: buttonColor,
           foregroundColor: buttonTextColor,
-          disabledBackgroundColor: Color(0xFFBFC5D2),
+          disabledBackgroundColor: const Color(0xFFBFC5D2),
           disabledForegroundColor: Colors.white,
           minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

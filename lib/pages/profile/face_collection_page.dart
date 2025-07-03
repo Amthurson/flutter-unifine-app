@@ -48,22 +48,22 @@ class _FaceCollectionPageState extends State<FaceCollectionPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Card(
+            const Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Icon(Icons.face, size: 48, color: Colors.blue),
-                    const SizedBox(height: 16),
-                    const Text(
+                    Icon(Icons.face, size: 48, color: Colors.blue),
+                    SizedBox(height: 16),
+                    Text(
                       '人脸采集',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: 8),
+                    Text(
                       '请按照提示进行人脸采集',
                       style: TextStyle(color: Colors.grey),
                     ),

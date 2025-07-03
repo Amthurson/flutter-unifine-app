@@ -4,7 +4,7 @@
  */
 
 (function() {
-    if (window.FlutterWebViewJavascriptBridge) {
+    if (window.WebViewJavascriptBridge) {
         return;
     }
 
@@ -12,9 +12,6 @@
     var sendMessageQueue = [];
     var receiveMessageQueue = [];
     var messageHandlers = {};
-
-    var CUSTOM_PROTOCOL_SCHEME = 'flutter';
-    var QUEUE_HAS_MESSAGE = '__QUEUE_MESSAGE__/';
 
     var responseCallbacks = {};
     var uniqueId = 1;
@@ -37,25 +34,27 @@
             responseCallbacks[callbackId] = responseCallback;
             message.callbackId = callbackId;
         }
-
+        // 兼容H5依赖的iframe触发（可选）
         sendMessageQueue.push(message);
-        messagingIframe.src = CUSTOM_PROTOCOL_SCHEME + '://' + QUEUE_HAS_MESSAGE;
+        if (messagingIframe) {
+            messagingIframe.src = 'flutter://' + '__QUEUE_MESSAGE__/';
+        }
+        // 真正发给Flutter
+        if (window.FlutterBridge) {
+            window.FlutterBridge.postMessage(JSON.stringify(message));
+        }
     }
 
     /**
      * 处理来自Flutter的消息
      */
     function _dispatchMessageFromFlutter(messageJSON) {
-        setTimeout(function _timeoutDispatchMessageFromFlutter() {
+        setTimeout(function() {
             var message = JSON.parse(messageJSON);
-            var messageHandler;
             var responseCallback;
-
             if (message.responseId) {
                 responseCallback = responseCallbacks[message.responseId];
-                if (!responseCallback) {
-                    return;
-                }
+                if (!responseCallback) return;
                 responseCallback(message.responseData);
                 delete responseCallbacks[message.responseId];
             } else {
@@ -65,7 +64,6 @@
                         _sendMessage({ responseId: callbackResponseId, responseData: responseData });
                     };
                 }
-
                 var handler = messageHandlers[message.handlerName];
                 if (!handler) {
                     console.log("WebViewJavascriptBridge: WARNING: no handler for message from Flutter:", message);
@@ -74,7 +72,6 @@
                 }
             }
         });
-        dispatchMessagingIframeEvent();
     }
 
     /**
@@ -106,10 +103,10 @@
      * 初始化
      */
     function init(messageHandler) {
-        if (FlutterWebViewJavascriptBridge._messageHandler) {
-            throw new Error('FlutterWebViewJavascriptBridge.init called twice');
+        if (WebViewJavascriptBridge._messageHandler) {
+            throw new Error('WebViewJavascriptBridge.init called twice');
         }
-        FlutterWebViewJavascriptBridge._messageHandler = messageHandler;
+        WebViewJavascriptBridge._messageHandler = messageHandler;
         var receivedMessages = receiveMessageQueue;
         receiveMessageQueue = null;
         for (var i = 0; i < receivedMessages.length; i++) {
@@ -117,31 +114,15 @@
         }
     }
 
-    /**
-     * 发送消息到Flutter通道
-     */
-    function sendToFlutter(message) {
-        if (window.FlutterBridge) {
-            window.FlutterBridge.postMessage(JSON.stringify(message));
-        }
-    }
-
-    /**
-     * 重写_sendMessage方法，使用Flutter通道
-     */
-    _sendMessage = function(message, responseCallback) {
-        if (responseCallback) {
-            var callbackId = 'cb_' + (uniqueId++) + '_' + new Date().getTime();
-            responseCallbacks[callbackId] = responseCallback;
-            message.callbackId = callbackId;
-        }
-        sendToFlutter(message);
+    // Flutter端会主动调用此方法，把消息回传给JS
+    window._handleMessageFromFlutter = function(messageJSON) {
+        _dispatchMessageFromFlutter(messageJSON);
     };
 
     /**
      * 创建全局对象
      */
-    window.FlutterWebViewJavascriptBridge = {
+    window.WebViewJavascriptBridge = {
         registerHandler: registerHandler,
         callHandler: callHandler,
         send: send,
@@ -159,81 +140,81 @@
      * 注册WebViewJavascriptBridgeReady事件
      */
     var readyEvent = doc.createEvent('Events');
-    readyEvent.initEvent('FlutterWebViewJavascriptBridgeReady');
-    readyEvent.bridge = FlutterWebViewJavascriptBridge;
+    readyEvent.initEvent('WebViewJavascriptBridgeReady');
+    readyEvent.bridge = WebViewJavascriptBridge;
     doc.dispatchEvent(readyEvent);
 
     /**
      * 便捷方法：获取Token
      */
     window.getToken = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getToken', null, callback);
+        WebViewJavascriptBridge.callHandler('getToken', JSON.stringify({}), callback);
     };
 
     /**
      * 便捷方法：获取用户信息
      */
     window.getUserInfo = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getUserInfo', null, callback);
+        WebViewJavascriptBridge.callHandler('getUserInfo', null, callback);
     };
 
     /**
      * 便捷方法：获取设备信息
      */
     window.getDeviceInfo = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getDeviceInfo', null, callback);
+        WebViewJavascriptBridge.callHandler('getDeviceInfo', JSON.stringify({}), callback);
     };
 
     /**
      * 便捷方法：打开链接
      */
     window.openLink = function(url, callback) {
-        FlutterWebViewJavascriptBridge.callHandler('openLink', JSON.stringify({url: url}), callback);
+        WebViewJavascriptBridge.callHandler('openLink', JSON.stringify({url: url}), callback);
     };
 
     /**
      * 便捷方法：设置屏幕方向
      */
     window.setPortrait = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('setPortrait', null, callback);
+        WebViewJavascriptBridge.callHandler('setPortrait', null, callback);
     };
 
     window.setLandscape = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('setLandscape', null, callback);
+        WebViewJavascriptBridge.callHandler('setLandscape', null, callback);
     };
 
     /**
      * 便捷方法：获取权限
      */
     window.getCameraAuth = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getCameraAuth', null, callback);
+        WebViewJavascriptBridge.callHandler('getCameraAuth', null, callback);
     };
 
     window.getLocationAuth = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getLocationAuth', null, callback);
+        WebViewJavascriptBridge.callHandler('getLocationAuth', null, callback);
     };
 
     window.getMicrophoneAuth = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getMicrophoneAuth', null, callback);
+        WebViewJavascriptBridge.callHandler('getMicrophoneAuth', null, callback);
     };
 
     /**
      * 便捷方法：数据存储
      */
     window.saveH5Data = function(data, callback) {
-        FlutterWebViewJavascriptBridge.callHandler('saveH5Data', JSON.stringify(data), callback);
+        WebViewJavascriptBridge.callHandler('saveH5Data', JSON.stringify(data), callback);
     };
 
     window.getH5Data = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getH5Data', null, callback);
+        WebViewJavascriptBridge.callHandler('getH5Data', null, callback);
     };
 
     /**
      * 便捷方法：网络信息
      */
     window.getNetworkConnectType = function(callback) {
-        FlutterWebViewJavascriptBridge.callHandler('getNetworkConnectType', null, callback);
+        WebViewJavascriptBridge.callHandler('getNetworkConnectType', null, callback);
     };
 
-    console.log('FlutterWebViewJavascriptBridge initialized');
+    console.log('WebViewJavascriptBridge (Flutter版) initialized');
 })(); 

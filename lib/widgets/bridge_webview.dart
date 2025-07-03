@@ -1,208 +1,223 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import '../utils/bridge/bridge_webview.dart' as bridge;
-import '../utils/bridge/jssdk_handlers.dart';
+import 'package:unified_front_end/utils/bridge/bridge_handler.dart';
+import 'package:unified_front_end/utils/bridge/jssdk_handlers.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
-/// Bridge WebView组件
-class BridgeWebView extends StatefulWidget {
-  final String url;
-  final String? title;
-  final bool isHome;
-  final bool isShowClose;
-  final Function(String)? onPageStarted;
-  final Function(String)? onPageFinished;
-  final Function(String)? onNavigationRequest;
-  final Function(String)? onError;
+/// Bridge WebView核心实现
+class BridgeWebView {
+  final WebViewController controller;
+  final Map<String, BridgeHandler> _handlers = {};
+  final List<BridgeMessage> _startupMessages = [];
+  final bool _isReady = false;
 
-  const BridgeWebView({
-    super.key,
-    required this.url,
-    this.title,
-    this.isHome = false,
-    this.isShowClose = true,
-    this.onPageStarted,
-    this.onPageFinished,
-    this.onNavigationRequest,
-    this.onError,
-  });
-
-  @override
-  State<BridgeWebView> createState() => _BridgeWebViewState();
-}
-
-class _BridgeWebViewState extends State<BridgeWebView> {
-  late final WebViewController _controller;
-  late final bridge.BridgeWebView _bridgeWebView;
-  bool _loading = true;
-  bool _hasError = false;
-  String _errorMessage = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _initWebView();
-  }
-
-  /// 初始化WebView
-  void _initWebView() {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (url) {
-            setState(() {
-              _loading = true;
-              _hasError = false;
-            });
-            widget.onPageStarted?.call(url);
-          },
-          onPageFinished: (url) {
-            setState(() {
-              _loading = false;
-              _hasError = false;
-            });
-            widget.onPageFinished?.call(url);
-            _initBridge();
-          },
-          onWebResourceError: (error) {
-            setState(() {
-              _hasError = true;
-              _loading = false;
-              _errorMessage = error.description;
-            });
-            widget.onError?.call(error.description);
-          },
-          onNavigationRequest: (request) {
-            widget.onNavigationRequest?.call(request.url);
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.url));
-
-    // 初始化Bridge
-    _bridgeWebView = bridge.BridgeWebView(controller: _controller);
-    _registerHandlers();
+  BridgeWebView({required this.controller}) {
+    _initBridge();
   }
 
   /// 初始化Bridge
   void _initBridge() {
-    // Bridge已经在构造函数中初始化，这里可以添加额外的初始化逻辑
+    print('[Bridge] 初始化Bridge');
+    // 注入JavaScript Bridge代码
+    _injectBridgeScript();
   }
 
-  /// 注册所有JSSDK处理器
-  void _registerHandlers() {
-    // 初始化处理器
-    JSSDKHandlers.initHandlers(context);
-
-    // 注册所有处理器
-    final handlers = JSSDKHandlers.getAllHandlers();
-    handlers.forEach((handlerName, handler) {
-      _bridgeWebView.registerHandler(handlerName, handler);
-    });
+  /// 注入统一的Bridge脚本
+  void _injectBridgeScript() {
+    // 使用统一的Bridge实现
+    controller.runJavaScript('''
+      // 加载统一的Bridge脚本
+      var script = document.createElement('script');
+      script.src = 'assets/js/flutter_bridge_unified.js';
+      document.head.appendChild(script);
+    ''');
   }
+
+  /// 注册处理器
+  void registerHandler(String handlerName, BridgeHandler handler) {
+    print('[Bridge] 注册handler: $handlerName');
+    _handlers[handlerName] = handler;
+  }
+
+  /// 处理JavaScript消息
+  void handleJavaScriptMessage(String message) {
+    print('[Bridge] 收到JS消息: $message');
+    try {
+      final messageData = jsonDecode(message);
+      print('[Bridge] 解析后的消息数据: $messageData');
+
+      // 检查消息格式
+      if (messageData['handlerName'] == null) {
+        print('[Bridge] 消息格式错误，缺少handlerName');
+        return;
+      }
+
+      final bridgeMessage = BridgeMessage.fromJson(messageData);
+      print(
+          '[Bridge] handlerName: ${bridgeMessage.handlerName}, callbackId: ${bridgeMessage.callbackId}');
+
+      final handler = _handlers[bridgeMessage.handlerName];
+      if (handler != null) {
+        print('[Bridge] 调用handler: ${bridgeMessage.handlerName}');
+        // 直接传递data，让handler自己处理类型转换
+        handler.call(bridgeMessage.data, (response) {
+          print('[Bridge] handler响应: $response');
+          _sendResponseToJavaScript(bridgeMessage.callbackId, response);
+        });
+      } else {
+        print('[Bridge] 未找到handler: ${bridgeMessage.handlerName}');
+        print('[Bridge] 可用的handlers: ${_handlers.keys.toList()}');
+        _sendResponseToJavaScript(
+            bridgeMessage.callbackId,
+            BridgeResponse.error(msg: '未找到处理器: ${bridgeMessage.handlerName}')
+                .toJsonString());
+      }
+    } catch (e) {
+      print('[Bridge] 处理消息异常: $e');
+      print('[Bridge] 原始消息: $message');
+    }
+  }
+
+  /// 发送响应到JavaScript
+  void _sendResponseToJavaScript(String? callbackId, String response) {
+    if (callbackId != null) {
+      print('[Bridge] 发送响应到JS, callbackId: $callbackId, response: $response');
+      final responseScript = '''
+        (function() {
+          var message = {
+            responseId: '$callbackId',
+            responseData: $response
+          };
+          console.log('[Bridge] 发送响应消息:', message);
+          // 直接调用统一Bridge的消息处理函数
+          if (window._handleMessageFromFlutter) {
+            window._handleMessageFromFlutter(JSON.stringify(message));
+          } else {
+            console.error('[Bridge] _handleMessageFromFlutter不存在');
+          }
+        })();
+      ''';
+      controller.runJavaScript(responseScript);
+    }
+  }
+
+  /// 调用JavaScript方法
+  void callHandler(
+      String handlerName, String data, Function(String)? callback) {
+    final script = '''
+      (function() {
+        if (window.WebViewJavascriptBridge) {
+          window.WebViewJavascriptBridge.callHandler('$handlerName', '$data', function(response) {
+            window.FlutterBridge.postMessage(JSON.stringify({
+              type: 'callback',
+              data: response
+            }));
+          });
+        }
+      })();
+    ''';
+    controller.runJavaScript(script);
+  }
+
+  /// 发送消息到JavaScript
+  void send(String data, Function(String)? callback) {
+    final script = '''
+      (function() {
+        if (window.WebViewJavascriptBridge) {
+          window.WebViewJavascriptBridge.send('$data', function(response) {
+            window.FlutterBridge.postMessage(JSON.stringify({
+              type: 'callback',
+              data: response
+            }));
+          });
+        }
+      })();
+    ''';
+    controller.runJavaScript(script);
+  }
+}
+
+class BridgeWebViewWidget extends StatefulWidget {
+  final String initialUrl;
+  final void Function(WebViewController controller)? onWebViewCreated;
+  final void Function(String url)? onPageStarted;
+  final void Function(String url)? onPageFinished;
+  final void Function(String url)? onNavigationRequest;
+
+  const BridgeWebViewWidget(
+      {required this.initialUrl,
+      this.onWebViewCreated,
+      super.key,
+      this.onPageStarted,
+      this.onPageFinished,
+      this.onNavigationRequest});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: widget.title != null
-          ? AppBar(
-              title: Text(widget.title!),
-              automaticallyImplyLeading: widget.isShowClose,
-              leading: widget.isShowClose
-                  ? IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    )
-                  : null,
-              actions: [
-                if (widget.isHome)
-                  IconButton(
-                    icon: const Icon(Icons.home),
-                    onPressed: () {
-                      // 返回主页逻辑
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                  ),
-              ],
-            )
-          : null,
-      body: Stack(
-        children: [
-          if (_hasError)
-            _buildErrorWidget()
-          else
-            WebViewWidget(controller: _controller),
-          if (_loading && !_hasError)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
-        ],
+  State<BridgeWebViewWidget> createState() => _BridgeWebViewWidgetState();
+}
+
+class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
+  late final WebViewController _controller;
+  BridgeWebView? _bridgeWebView;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController();
+
+    // 初始化JSSDK handlers
+    JSSDKHandlers.initHandlers(context);
+
+    _controller.addJavaScriptChannel(
+      'FlutterBridge',
+      onMessageReceived: (JavaScriptMessage message) {
+        print('[Bridge] 收到FlutterBridge消息: ${message.message}');
+        // 如果有BridgeWebView实例，则处理消息
+        if (_bridgeWebView != null) {
+          _bridgeWebView!.handleJavaScriptMessage(message.message);
+        } else {
+          print('[Bridge] BridgeWebView实例不存在，无法处理消息');
+        }
+      },
+    );
+
+    // 设置导航代理
+    _controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageFinished: (String url) async {
+          print('[Bridge] 页面加载完成: $url');
+          if (_isInitialized) return;
+          _isInitialized = true;
+
+          // 注册所有handlers
+          _bridgeWebView = BridgeWebView(controller: _controller);
+          final allHandlers = JSSDKHandlers.getAllHandlers();
+          allHandlers.forEach((name, handler) {
+            _bridgeWebView!.registerHandler(name, handler);
+          });
+
+          // 注入Bridge脚本
+          final bridgeScript = await loadBridgeScript();
+          await _controller.runJavaScript(bridgeScript);
+          print('[Bridge] WebViewJavascriptBridge注入完成');
+        },
       ),
     );
   }
 
-  /// 构建错误显示组件
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text('加载失败: $_errorMessage'),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _hasError = false;
-                _loading = true;
-              });
-              _controller.reload();
-            },
-            child: const Text('重新加载'),
-          ),
-        ],
-      ),
+  @override
+  Widget build(BuildContext context) {
+    return WebViewWidget(
+      controller: _controller
+        ..loadRequest(Uri.parse(widget.initialUrl))
+        ..setJavaScriptMode(JavaScriptMode.unrestricted),
     );
   }
 }
 
-/// Bridge WebView页面
-class BridgeWebViewPage extends StatelessWidget {
-  final String url;
-  final String? title;
-  final bool isHome;
-  final bool isShowClose;
-
-  const BridgeWebViewPage({
-    super.key,
-    required this.url,
-    this.title,
-    this.isHome = false,
-    this.isShowClose = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BridgeWebView(
-      url: url,
-      title: title,
-      isHome: isHome,
-      isShowClose: isShowClose,
-      onPageStarted: (url) {
-        print('页面开始加载: $url');
-      },
-      onPageFinished: (url) {
-        print('页面加载完成: $url');
-      },
-      onNavigationRequest: (url) {
-        print('导航请求: $url');
-      },
-      onError: (error) {
-        print('页面加载错误: $error');
-      },
-    );
-  }
+Future<String> loadBridgeScript() async {
+  return await rootBundle.loadString('assets/js/flutter_bridge_unified.js');
 }

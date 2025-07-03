@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
-import '../models/home_url_info.dart';
 
 /// 导航工具类
 /// 对应Android项目中的MainJumpUtils
@@ -10,25 +9,18 @@ class NavigationUtils {
   /// 登录后跳转至主页面
   /// 对应Android项目中的MainJumpUtils.jumpMainBridgeActivity方法
   static void jumpMainBridgeActivity(BuildContext context) {
-    print('NavigationUtils.jumpMainBridgeActivity: 开始执行跳转逻辑');
-
     final userProvider = context.read<UserProvider>();
-    print(
-        'NavigationUtils.jumpMainBridgeActivity: 用户登录状态: ${userProvider.isLoggedIn}');
-    print(
-        'NavigationUtils.jumpMainBridgeActivity: 是否有主页URL信息: ${userProvider.hasHomeUrlInfo}');
-
     // 检查是否有主页URL信息
     if (userProvider.hasHomeUrlInfo) {
       // 有主页URL信息，跳转到广告页
       final homeUrlInfo = userProvider.homeUrlInfo!;
-      print(
-          'NavigationUtils.jumpMainBridgeActivity: 跳转到广告页，主页URL: ${homeUrlInfo.indexUrl}');
       context.go('/launch-advert', extra: homeUrlInfo);
     } else {
       // 没有主页URL信息，跳转到平台选择页
-      print('NavigationUtils.jumpMainBridgeActivity: 跳转到平台选择页');
-      context.go('/platform-select');
+      // context.go('/platform-select');
+      // context.go('/bridge-test');
+      // context.go('/bridge-unified-test');
+      context.go('/token-test');
     }
   }
 

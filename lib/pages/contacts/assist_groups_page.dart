@@ -29,7 +29,7 @@ class AssistGroupsPage extends StatelessWidget {
 
   Widget _buildGroupItem(String name, String memberCount, String status) {
     return ListTile(
-      leading: CircleAvatar(
+      leading: const CircleAvatar(
         backgroundColor: Colors.orange,
         child: Icon(Icons.group, color: Colors.white),
       ),

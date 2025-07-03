@@ -2,13 +2,13 @@ import 'dart:convert';
 
 /// Bridge处理器接口
 abstract class BridgeHandler {
-  void call(String data, Function(String) callback);
+  void call(dynamic data, Function(String) callback);
 }
 
 /// Bridge消息数据模型
 class BridgeMessage {
   final String handlerName;
-  final String data;
+  final dynamic data; // 改为dynamic类型，支持String和Map
   final String? callbackId;
 
   BridgeMessage({
@@ -20,7 +20,7 @@ class BridgeMessage {
   factory BridgeMessage.fromJson(Map<String, dynamic> json) {
     return BridgeMessage(
       handlerName: json['handlerName'] ?? '',
-      data: json['data'] ?? '',
+      data: json['data'], // 直接使用，不做类型转换
       callbackId: json['callbackId'],
     );
   }

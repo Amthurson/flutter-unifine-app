@@ -8,7 +8,6 @@ import '../../api/auth_api.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user.dart';
 import '../../utils/encrypt_util.dart';
-import '../../services/user_service.dart';
 
 class VerificationLoginPage extends StatefulWidget {
   const VerificationLoginPage({super.key});

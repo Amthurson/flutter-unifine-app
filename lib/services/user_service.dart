@@ -22,8 +22,19 @@ class UserService {
 
   /// 获取token
   static Future<String?> getToken() async {
-    final userInfo = await getUserInfo();
-    return userInfo?['token'];
+    final prefs = await SharedPreferences.getInstance();
+    // 首先尝试从user_info中获取token
+    final userInfoStr = prefs.getString(_userInfoKey);
+    if (userInfoStr != null) {
+      try {
+        final userInfo = jsonDecode(userInfoStr);
+        return userInfo['token'] as String?;
+      } catch (e) {
+        print('解析用户信息失败: $e');
+      }
+    }
+    // 如果user_info中没有，尝试从单独的token键获取
+    return prefs.getString('token');
   }
 
   /// 清除用户信息

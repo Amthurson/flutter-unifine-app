@@ -7,7 +7,6 @@ import '../../api/auth_api.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user.dart';
 import '../../utils/navigation_utils.dart';
-import '../../services/user_service.dart';
 
 class PasswordLoginPage extends StatefulWidget {
   const PasswordLoginPage({super.key});
@@ -80,9 +79,6 @@ class _PasswordLoginPageState extends State<PasswordLoginPage> {
           NavigationUtils.jumpMainBridgeActivity(context);
         }
       }
-
-      // 1. 登录接口（账号密码/验证码等）成功后，拿到token
-      await UserService.saveUserInfo(result);
     } catch (e) {
       if (mounted) {
         Fluttertoast.showToast(msg: e.toString());

@@ -121,6 +121,7 @@ class UserProvider extends ChangeNotifier {
         // 其它你需要保留的字段
       };
       _userDetailInfo = merged;
+      print("merged: $merged");
       await UserService.saveUserInfo(merged);
       print('获取用户详细信息成功');
     } catch (e) {
@@ -248,7 +249,15 @@ class UserProvider extends ChangeNotifier {
   /// 更新用户信息
   Future<void> updateUserInfo(User user) async {
     try {
-      await UserService.saveUserInfo(user.toJson());
+      // 合并token等关键信息
+      final merged = {
+        ..._userDetailInfo!,
+        ...user.toJson(),
+        // 其它你需要保留的字段
+      };
+      _userDetailInfo = merged;
+      print("merged: $merged");
+      await UserService.saveUserInfo(merged);
       _currentUser = user;
       notifyListeners();
     } catch (e) {

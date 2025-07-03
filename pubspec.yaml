@@ -97,6 +97,12 @@ dependencies:
   pointycastle: ^3.9.1
   asn1lib: ^1.1.0
 
+  # 蓝牙功能
+  flutter_blue_plus: ^1.31.15
+  
+  # 包管理器
+  package_info_plus: ^8.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -126,7 +132,6 @@ flutter:
     - assets/fonts/
     - assets/js/
     - assets/js/flutter_bridge_unified.js
-    - assets/js/webview_javascript_bridge.js
     - assets/test_token.html
 
   # An image asset can refer to one or more resolution-specific "variants", see

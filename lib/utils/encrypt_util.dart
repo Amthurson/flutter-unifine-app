@@ -79,11 +79,6 @@ class EncryptUtil {
     return base64Encode(utf8.encode(text));
   }
 
-  /// Base64解码
-  static String _base64Decode(String encoded) {
-    return utf8.decode(base64Decode(encoded));
-  }
-
   /// 测试RSA加密是否可用
   static bool isRsaAvailable() {
     // 暂时返回true，表示加密功能可用

@@ -1,39 +1,37 @@
 import 'dart:convert';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:unified_front_end/utils/bridge/bridge_handler.dart';
 import 'package:unified_front_end/utils/bridge/jssdk_handlers.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:unified_front_end/widgets/navigation_bar_widget.dart';
 
 /// Bridge WebView核心实现
 class BridgeWebView {
   final WebViewController controller;
   final Map<String, BridgeHandler> _handlers = {};
-  final List<BridgeMessage> _startupMessages = [];
-  final bool _isReady = false;
 
   BridgeWebView({required this.controller}) {
-    _initBridge();
+    // _initBridge();
   }
 
   /// 初始化Bridge
-  void _initBridge() {
-    print('[Bridge] 初始化Bridge');
-    // 注入JavaScript Bridge代码
-    _injectBridgeScript();
-  }
+  // void _initBridge() {
+  //   print('[Bridge] 初始化Bridge');
+  //   // 注入JavaScript Bridge代码
+  //   _injectBridgeScript();
+  // }
 
   /// 注入统一的Bridge脚本
-  void _injectBridgeScript() {
-    // 使用统一的Bridge实现
-    controller.runJavaScript('''
-      // 加载统一的Bridge脚本
-      var script = document.createElement('script');
-      script.src = 'assets/js/flutter_bridge_unified.js';
-      document.head.appendChild(script);
-    ''');
-  }
+  // void _injectBridgeScript() {
+  //   // 使用统一的Bridge实现
+  //   controller.runJavaScript('''
+  //     // 加载统一的Bridge脚本
+  //     var script = document.createElement('script');
+  //     script.src = 'assets/js/flutter_bridge_unified.js';
+  //     document.head.appendChild(script);
+  //   ''');
+  // }
 
   /// 注册处理器
   void registerHandler(String handlerName, BridgeHandler handler) {
@@ -162,6 +160,8 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
   late final WebViewController _controller;
   BridgeWebView? _bridgeWebView;
   bool _isInitialized = false;
+  String? _bridgeScript;
+  final GlobalKey<NavigationBarWidgetState> navKey = GlobalKey<NavigationBarWidgetState>();
 
   @override
   void initState() {
@@ -169,28 +169,35 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
     _controller = WebViewController();
 
     // 初始化JSSDK handlers
-    JSSDKHandlers.initHandlers(context);
+    JSSDKHandlers.initHandlers(context, navKey);
+
+    // 预加载本地js内容
+    rootBundle.loadString('assets/js/flutter_bridge_unified.js').then((js) {
+      _bridgeScript = js;
+    });
 
     _controller.addJavaScriptChannel(
       'FlutterBridge',
       onMessageReceived: (JavaScriptMessage message) {
-        print('[Bridge] 收到FlutterBridge消息: ${message.message}');
-        // 如果有BridgeWebView实例，则处理消息
         if (_bridgeWebView != null) {
           _bridgeWebView!.handleJavaScriptMessage(message.message);
-        } else {
-          print('[Bridge] BridgeWebView实例不存在，无法处理消息');
         }
       },
     );
 
-    // 设置导航代理
     _controller.setNavigationDelegate(
       NavigationDelegate(
         onPageFinished: (String url) async {
-          print('[Bridge] 页面加载完成: $url');
           if (_isInitialized) return;
           _isInitialized = true;
+
+          // 注入Bridge脚本
+          if (_bridgeScript != null) {
+            await _controller.runJavaScript(_bridgeScript!);
+          } else {
+            final js = await rootBundle.loadString('assets/js/flutter_bridge_unified.js');
+            await _controller.runJavaScript(js);
+          }
 
           // 注册所有handlers
           _bridgeWebView = BridgeWebView(controller: _controller);
@@ -199,9 +206,6 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
             _bridgeWebView!.registerHandler(name, handler);
           });
 
-          // 注入Bridge脚本
-          final bridgeScript = await loadBridgeScript();
-          await _controller.runJavaScript(bridgeScript);
           print('[Bridge] WebViewJavascriptBridge注入完成');
         },
       ),
@@ -216,8 +220,4 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
         ..setJavaScriptMode(JavaScriptMode.unrestricted),
     );
   }
-}
-
-Future<String> loadBridgeScript() async {
-  return await rootBundle.loadString('assets/js/flutter_bridge_unified.js');
 }

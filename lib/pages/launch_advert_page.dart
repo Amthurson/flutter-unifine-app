@@ -60,8 +60,6 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
     });
 
     try {
-      final userProvider = context.read<UserProvider>();
-
       // 模拟获取窗口信息的API调用
       await Future.delayed(const Duration(milliseconds: 500));
 
@@ -82,10 +80,8 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
   }
 
   void _navigateToMainPage() {
-    final userProvider = context.read<UserProvider>();
-
     // 检查是否有主页URL信息
-    final homeUrlInfo = userProvider.getHomeUrlInfo();
+    final homeUrlInfo = context.read<UserProvider>().getHomeUrlInfo();
 
     if (homeUrlInfo != null && 
         homeUrlInfo.indexUrl != null && 

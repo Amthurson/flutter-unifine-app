@@ -1,8 +1,7 @@
 import 'package:dio/dio.dart';
 import '../config/env_config.dart';
 import '../utils/encrypt_util.dart';
-import 'package:unified_front_end/services/user_service.dart';
-import 'package:unified_front_end/utils/dio_client.dart';
+import '../utils/dio_client.dart';
 
 class AuthApi {
   static final Dio _dio = Dio(
@@ -91,7 +90,6 @@ class AuthApi {
         },
       );
       if (resp.data['code'] == 3001) {
-        await UserService.saveUserInfo(resp.data['data']);
         return resp.data['data'];
       } else {
         throw Exception(resp.data['msg'] ?? '登录失败');
@@ -130,7 +128,6 @@ class AuthApi {
       },
     );
     if (resp.data['code'] == 3001) {
-      await UserService.saveUserInfo(resp.data['data']);
       return resp.data['data'];
     } else {
       throw Exception(resp.data['msg'] ?? '登录失败');
@@ -154,7 +151,6 @@ class AuthApi {
         },
       );
       if (resp.data['success'] == true) {
-        await UserService.saveUserInfo(resp.data['data']);
         return resp.data['data'];
       } else {
         throw Exception(resp.data['msg'] ?? '登录失败');
@@ -190,7 +186,6 @@ class PasswordLoginApi {
         },
       );
       if (resp.data['code'] == 3001) {
-        await UserService.saveUserInfo(resp.data['data']);
         return resp.data['data'];
       } else {
         throw Exception(resp.data['msg'] ?? '登录失败');

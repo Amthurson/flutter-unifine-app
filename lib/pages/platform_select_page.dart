@@ -70,7 +70,7 @@ class _PlatformSelectPageState extends State<PlatformSelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cloudAppUrl = '${EnvConfig.baseUrl}cloudApp';
+    final cloudAppUrl = '${EnvConfig.baseUrl}cloudApp/selectSys/index';
 
     return Scaffold(
       appBar: AppBar(

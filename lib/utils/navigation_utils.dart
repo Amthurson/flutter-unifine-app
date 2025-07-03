@@ -17,10 +17,8 @@ class NavigationUtils {
       context.go('/launch-advert', extra: homeUrlInfo);
     } else {
       // 没有主页URL信息，跳转到平台选择页
-      // context.go('/platform-select');
-      // context.go('/bridge-test');
-      // context.go('/bridge-unified-test');
-      context.go('/token-test');
+      context.go('/platform-select');
+      // context.go('/token-test');
     }
   }
 

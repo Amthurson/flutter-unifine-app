@@ -16,22 +16,28 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'bridge_handler.dart';
+import 'package:unified_front_end/services/app_launcher_service.dart';
+import 'package:unified_front_end/services/bluetooth_service.dart';
+import 'package:unified_front_end/widgets/navigation_bar_widget.dart';
+import 'package:go_router/go_router.dart';
 
 /// JSSDK处理器管理器
 class JSSDKHandlers {
   static final Map<String, BridgeHandler> handlers = {};
+  static BuildContext? globalContext;
 
   /// 初始化所有处理器
-  static void initHandlers(BuildContext context) {
+  static void initHandlers(BuildContext context, GlobalKey<NavigationBarWidgetState> navKey) {
+    globalContext = context;
     // 基础功能
-    handlers['setPortrait'] = _SetPortraitHandler(context);
-    handlers['setLandscape'] = _SetLandscapeHandler(context);
+    handlers['setPortrait'] = _SetPortraitHandler();
+    handlers['setLandscape'] = _SetLandscapeHandler();
     handlers['getToken'] = _GetTokenHandler();
     handlers['saveHomeUrl'] = _SaveHomeUrlHandler();
     handlers['openLink'] = _OpenLinkHandler();
-    handlers['showFloat'] = _ShowFloatHandler(context);
+    handlers['showFloat'] = _ShowFloatHandler();
     handlers['preRefresh'] = _PreRefreshHandler();
-    handlers['setNavigation'] = _SetNavigationHandler(context);
+    handlers['setNavigation'] = _SetNavigationHandler(navKey);
 
     // 添加简单测试处理器
     handlers['test'] = _TestHandler();
@@ -47,9 +53,9 @@ class JSSDKHandlers {
 
     // 媒体功能
     handlers['saveImage'] = _SaveImageHandler();
-    handlers['showPhotos'] = _ShowPhotosHandler(context);
-    handlers['scanQRCode'] = _ScanQRCodeHandler(context);
-    handlers['scanCodeCard'] = _ScanCodeCardHandler(context);
+    handlers['showPhotos'] = _ShowPhotosHandler();
+    handlers['scanQRCode'] = _ScanQRCodeHandler();
+    handlers['scanCodeCard'] = _ScanCodeCardHandler();
     handlers['savePhotoToAlbum'] = _SavePhotoToAlbumHandler();
 
     // 位置服务
@@ -71,14 +77,14 @@ class JSSDKHandlers {
     handlers['reStartLogin'] = _ReStartLoginHandler();
 
     // 应用管理
-    handlers['openNewWebPage'] = _OpenNewWebPageHandler(context);
+    handlers['openNewWebPage'] = _OpenNewWebPageHandler();
     handlers['logout'] = _LogoutHandler();
     handlers['clearCache'] = _ClearCacheHandler();
 
     // 文件操作
-    handlers['fileUpload'] = _FileUploadHandler(context);
+    handlers['fileUpload'] = _FileUploadHandler();
     handlers['fileDownLoadNew'] = _FileDownLoadNewHandler();
-    handlers['scanFile'] = _ScanFileHandler(context);
+    handlers['scanFile'] = _ScanFileHandler();
 
     // 通讯功能
     handlers['call'] = _CallHandler();
@@ -86,7 +92,7 @@ class JSSDKHandlers {
     handlers['startIMMessageList'] = _StartIMMessageListHandler();
 
     // 录音和语音
-    handlers['startRecord'] = _StartRecordHandler(context);
+    handlers['startRecord'] = _StartRecordHandler();
 
     // 设备信息
     handlers['getDeviceInfo'] = _GetDeviceInfoHandler();
@@ -94,11 +100,11 @@ class JSSDKHandlers {
         _GetMobileDeviceInformationHandler();
 
     // 人脸识别
-    handlers['startFaceCollect'] = _StartFaceCollectHandler(context);
-    handlers['startFaceMatch'] = _StartFaceMatchHandler(context);
+    handlers['startFaceCollect'] = _StartFaceCollectHandler();
+    handlers['startFaceMatch'] = _StartFaceMatchHandler();
 
     // 签名功能
-    handlers['startSign'] = _StartSignHandler(context);
+    handlers['startSign'] = _StartSignHandler();
 
     // 数据存储
     handlers['saveH5Data'] = _SaveH5DataHandler();
@@ -115,6 +121,15 @@ class JSSDKHandlers {
     handlers['ivmsplayv2'] = _Ivmsplayv2Handler();
     handlers['ivmsplay'] = _IvmsplayHandler();
     handlers['openDaHuaPreVideo'] = _OpenDaHuaPreVideoHandler();
+
+    // 应用启动
+    handlers['launchApp'] = _LaunchAppHandler();
+
+    // 蓝牙功能
+    handlers['checkBtEnable'] = _CheckBtEnableHandler();
+    handlers['getBtDeviceList'] = _GetBtDeviceListHandler();
+    handlers['connectToBtDevice'] = _ConnectToBtDeviceHandler();
+    handlers['disconnectBtDevice'] = _DisconnectBtDeviceHandler();
   }
 
   /// 获取所有处理器
@@ -141,9 +156,6 @@ class _TestHandler implements BridgeHandler {
 }
 
 class _SetPortraitHandler implements BridgeHandler {
-  final BuildContext context;
-  _SetPortraitHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) {
     SystemChrome.setPreferredOrientations([
@@ -155,9 +167,6 @@ class _SetPortraitHandler implements BridgeHandler {
 }
 
 class _SetLandscapeHandler implements BridgeHandler {
-  final BuildContext context;
-  _SetLandscapeHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) {
     SystemChrome.setPreferredOrientations([
@@ -192,12 +201,38 @@ class _SaveHomeUrlHandler implements BridgeHandler {
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
+      // 兼容 data 可能为 String 或 Map
       final entity = data is String ? jsonDecode(data) : data;
+      final indexUrl = entity['indexUrl'] as String?;
+
+      if (indexUrl == null || indexUrl.isEmpty) {
+        // 这里可以用 FlutterToast 或其它方式弹提示
+        // Fluttertoast.showToast(msg: "暂无数据");
+        callback(jsonEncode({
+          "status": "fail",
+          "msg": "indexUrl为空",
+          "data": {}
+        }));
+        return;
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('homeUrl', jsonEncode(entity));
-      callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
+
+      // 这里可以实现 selectWindow 逻辑（如有需要）
+      // presenter.selectWindow(windowsId ?? "");
+
+      callback(jsonEncode({
+        "status": "success",
+        "msg": "成功",
+        "data": {}
+      }));
     } catch (e) {
-      callback(jsonEncode({"status": "fail", "msg": '保存失败: $e', "data": {}}));
+      callback(jsonEncode({
+        "status": "fail",
+        "msg": "保存失败: $e",
+        "data": {}
+      }));
     }
   }
 }
@@ -206,24 +241,47 @@ class _OpenLinkHandler implements BridgeHandler {
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
-      final url = data is String ? jsonDecode(data)['url'] : data['url'];
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
-      } else {
-        callback(jsonEncode({"status": "fail", "msg": '无法打开链接', "data": {}}));
+      final entity = data is String ? jsonDecode(data) : data;
+      final url = entity['url'] as String?;
+      final isFunc = entity['isFunc'] as int? ?? 0;
+      final title = entity['title'] as String? ?? '';
+      final isHome = entity['isHome'] as bool? ?? false;
+      final hidden = entity['hidden'] as int? ?? 0;
+
+      if (url == null || url.isEmpty) {
+        callback(jsonEncode({
+          "status": "fail",
+          "msg": "暂无数据",
+          "data": {}
+        }));
+        return;
       }
+
+      // 使用 go_router 跳转
+      GoRouter.of(JSSDKHandlers.globalContext!).go('/web-home', extra: {
+        'title': title,
+        'url': url,
+        'isHome': isHome,
+        'hiddenTitle': hidden == 1,
+        'isFunc': isFunc == 1,
+      });
+
+      callback(jsonEncode({
+        "status": "success",
+        "msg": "",
+        "data": {}
+      }));
     } catch (e) {
-      callback(jsonEncode({"status": "fail", "msg": '打开链接失败: $e', "data": {}}));
+      callback(jsonEncode({
+        "status": "fail",
+        "msg": "打开链接失败: $e",
+        "data": {}
+      }));
     }
   }
 }
 
 class _ShowFloatHandler implements BridgeHandler {
-  final BuildContext context;
-  _ShowFloatHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) {
     callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
@@ -238,11 +296,23 @@ class _PreRefreshHandler implements BridgeHandler {
 }
 
 class _SetNavigationHandler implements BridgeHandler {
-  final BuildContext context;
-  _SetNavigationHandler(this.context);
+  final GlobalKey<NavigationBarWidgetState> navKey;
+  _SetNavigationHandler(this.navKey);
 
   @override
   void call(dynamic data, Function(String) callback) {
+    // 解析data，动态设置导航栏
+    final navData = data is String ? jsonDecode(data) : data;
+    navKey.currentState?.updateNavigation(
+      title: navData['title'],
+      showBack: navData['showBack'],
+      backgroundColor: navData['backgroundColor'] != null
+          ? Color(int.parse(navData['backgroundColor']))
+          : null,
+      foregroundColor: navData['foregroundColor'] != null
+          ? Color(int.parse(navData['foregroundColor']))
+          : null,
+    );
     callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
   }
 }
@@ -383,9 +453,6 @@ class _SaveImageHandler implements BridgeHandler {
 }
 
 class _ShowPhotosHandler implements BridgeHandler {
-  final BuildContext context;
-  _ShowPhotosHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) {
     callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
@@ -393,9 +460,6 @@ class _ShowPhotosHandler implements BridgeHandler {
 }
 
 class _ScanQRCodeHandler implements BridgeHandler {
-  final BuildContext context;
-  _ScanQRCodeHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -419,9 +483,6 @@ class _ScanQRCodeHandler implements BridgeHandler {
 }
 
 class _ScanCodeCardHandler implements BridgeHandler {
-  final BuildContext context;
-  _ScanCodeCardHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -514,7 +575,6 @@ class _NavigationToHandler implements BridgeHandler {
       final navData = data is String ? jsonDecode(data) : data;
       final latitude = double.parse(navData['latitude']);
       final longitude = double.parse(navData['longitude']);
-      final address = navData['address'] as String;
 
       final url = 'https://maps.google.com/maps?q=$latitude,$longitude';
       final uri = Uri.parse(url);
@@ -562,7 +622,8 @@ class _GetUserInfoHandler implements BridgeHandler {
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
-      final userInfo = await UserService.getUserInfo() as User?;
+      Map<String, dynamic>? userInfoRaw = await UserService.getUserInfo();
+      User? userInfo = userInfoRaw != null ? User.fromJson(userInfoRaw) : null;
       if (userInfo != null) {
         callback(jsonEncode(
             {"status": "success", "msg": "成功", "data": userInfo.phone}));
@@ -580,25 +641,42 @@ class _GetSessionStorageHandler implements BridgeHandler {
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
+      Map<String, dynamic> safeData;
+      if (data is Map<String, dynamic>) {
+        safeData = data;
+      } else if (data is Map) {
+        safeData = Map<String, dynamic>.from(data);
+      } else {
+        safeData = {};
+      }
+
       final prefs = await SharedPreferences.getInstance();
-      final userInfo = await UserService.getUserInfo() as User?;
+      Map<String, dynamic>? userInfoRaw = await UserService.getUserInfo();
+
+      print("userInfoRaw: $userInfoRaw");
+
       final homeUrlJson = prefs.getString('homeUrl');
 
       final sessionData = {
-        'tokenId': userInfo?.token,
-        'userId': userInfo?.userId,
-        'userName': userInfo?.userName,
-        'mobile': userInfo?.phone,
-        'eid':
-            homeUrlJson != null ? jsonDecode(homeUrlJson)['windowsId'] : null,
+        'tokenId': userInfoRaw != null ? userInfoRaw['token'] : '',
+        'userId': userInfoRaw != null ? userInfoRaw['userId'] : '',
+        'userName': userInfoRaw != null ? userInfoRaw['userName'] : '',
+        'mobile': userInfoRaw != null ? userInfoRaw['phone'] : '',
+        'eid': homeUrlJson != null ? jsonDecode(homeUrlJson)['windowsId'] : null,
         'baseUrl': EnvConfig.baseUrl,
       };
 
-      callback(
-          jsonEncode({"status": "success", "msg": "", "data": sessionData}));
+      callback(jsonEncode({
+        "status": "success",
+        "msg": "",
+        "data": sessionData
+      }));
     } catch (e) {
-      callback(
-          jsonEncode({"status": "fail", "msg": "获取会话存储失败: $e", "data": {}}));
+      callback(jsonEncode({
+        "status": "fail",
+        "msg": "获取会话存储失败: $e",
+        "data": {}
+      }));
     }
   }
 }
@@ -849,9 +927,6 @@ class _UploadLogFileHandler implements BridgeHandler {
 // ==================== 文件操作处理器====================
 
 class _FileUploadHandler implements BridgeHandler {
-  final BuildContext context;
-  _FileUploadHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -902,9 +977,6 @@ class _FileDownLoadNewHandler implements BridgeHandler {
 }
 
 class _ScanFileHandler implements BridgeHandler {
-  final BuildContext context;
-  _ScanFileHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) {
     callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
@@ -950,15 +1022,12 @@ class _StartIMMessageListHandler implements BridgeHandler {
 // ==================== 录音和语音处理器====================
 
 class _StartRecordHandler implements BridgeHandler {
-  final BuildContext context;
-  _StartRecordHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
       const recognizeResult = "mock_recognize_result";
       callback(jsonEncode(
-          {"status": "success", "msg": "", "data": recognizeResult}));
+          {"status": "success", "msg": "操作成功", "data": recognizeResult}));
     } catch (e) {
       callback(jsonEncode({"status": "fail", "msg": "语音识别失败: $e", "data": {}}));
     }
@@ -968,9 +1037,6 @@ class _StartRecordHandler implements BridgeHandler {
 // ==================== 人脸识别处理器====================
 
 class _StartFaceCollectHandler implements BridgeHandler {
-  final BuildContext context;
-  _StartFaceCollectHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -994,9 +1060,6 @@ class _StartFaceCollectHandler implements BridgeHandler {
 }
 
 class _StartFaceMatchHandler implements BridgeHandler {
-  final BuildContext context;
-  _StartFaceMatchHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -1018,9 +1081,6 @@ class _StartFaceMatchHandler implements BridgeHandler {
 // ==================== 签名功能处理器====================
 
 class _StartSignHandler implements BridgeHandler {
-  final BuildContext context;
-  _StartSignHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -1060,9 +1120,6 @@ class _StartVideoCallHandler implements BridgeHandler {
 }
 
 class _OpenNewWebPageHandler implements BridgeHandler {
-  final BuildContext context;
-  _OpenNewWebPageHandler(this.context);
-
   @override
   void call(dynamic data, Function(String) callback) async {
     try {
@@ -1124,5 +1181,188 @@ class _OpenDaHuaPreVideoHandler implements BridgeHandler {
   @override
   void call(dynamic data, Function(String) callback) {
     callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
+  }
+}
+
+// ==================== 应用启动处理器====================
+
+class _LaunchAppHandler implements BridgeHandler {
+  @override
+  void call(dynamic data, Function(String) callback) async {
+    try {
+      final launchData = data is String ? jsonDecode(data) : data;
+      final packageName = launchData['packageName'] as String;
+
+      final appLauncherService = AppLauncherService();
+      final isInstalled = await appLauncherService.isAppInstalled(packageName);
+
+      if (isInstalled) {
+        final success = await appLauncherService.launchApp(packageName);
+        if (success) {
+          callback(jsonEncode({"status": "success", "msg": "成功", "data": {}}));
+        } else {
+          callback(jsonEncode({"status": "fail", "msg": "启动应用失败", "data": {}}));
+        }
+      } else {
+        callback(jsonEncode({"status": "fail", "msg": "应用未安装", "data": {}}));
+      }
+    } catch (e) {
+      callback(jsonEncode({"status": "fail", "msg": "启动应用失败: $e", "data": {}}));
+    }
+  }
+}
+
+// ==================== 蓝牙功能处理器====================
+
+class _CheckBtEnableHandler implements BridgeHandler {
+  @override
+  void call(dynamic data, Function(String) callback) async {
+    try {
+      final bluetoothService = BluetoothDeviceManager();
+      await bluetoothService.initialize();
+
+      final isSupportBle = await bluetoothService.isSupportBle();
+      if (!isSupportBle) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "该设备不支持蓝牙功能", "data": {}}));
+        return;
+      }
+
+      final hasPermission = await bluetoothService.checkPermission();
+      if (!hasPermission) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "没有蓝牙使用权限，请先授权", "data": {}}));
+        return;
+      }
+
+      final isBlueEnable = await bluetoothService.isBlueEnable();
+      if (!isBlueEnable) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "蓝牙未开启，请先开启蓝牙", "data": {}}));
+        return;
+      }
+
+      callback(jsonEncode(
+          {"status": "success", "msg": "蓝牙已开启，可以执行后续操作", "data": {}}));
+    } catch (e) {
+      callback(
+          jsonEncode({"status": "fail", "msg": "检查蓝牙状态失败: $e", "data": {}}));
+    }
+  }
+}
+
+class _GetBtDeviceListHandler implements BridgeHandler {
+  @override
+  void call(dynamic data, Function(String) callback) async {
+    try {
+      final bluetoothService = BluetoothDeviceManager();
+      await bluetoothService.initialize();
+
+      final isSupportBle = await bluetoothService.isSupportBle();
+      if (!isSupportBle) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "该设备不支持蓝牙功能", "data": {}}));
+        return;
+      }
+
+      final hasPermission = await bluetoothService.checkPermission();
+      if (!hasPermission) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "没有蓝牙使用权限，请先授权", "data": {}}));
+        return;
+      }
+
+      final isBlueEnable = await bluetoothService.isBlueEnable();
+      if (!isBlueEnable) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "蓝牙未开启，请先开启蓝牙", "data": {}}));
+        return;
+      }
+
+      final devices = await bluetoothService.scanDevices();
+      callback(jsonEncode({
+        "status": "success",
+        "msg": "",
+        "data": {'devices': devices}
+      }));
+    } catch (e) {
+      callback(
+          jsonEncode({"status": "fail", "msg": "获取蓝牙设备列表失败: $e", "data": {}}));
+    }
+  }
+}
+
+class _ConnectToBtDeviceHandler implements BridgeHandler {
+  @override
+  void call(dynamic data, Function(String) callback) async {
+    try {
+      final connectData = data is String ? jsonDecode(data) : data;
+      final identifier = connectData['identifier'] as String;
+      final serviceUUID = connectData['serviceUUID'] as String;
+      final characterUUID = connectData['characterUUID'] as String;
+
+      if (identifier.isEmpty) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "mac地址不能为空", "data": {}}));
+        return;
+      }
+
+      if (serviceUUID.isEmpty) {
+        callback(jsonEncode(
+            {"status": "fail", "msg": "serviceUUID不能为空", "data": {}}));
+        return;
+      }
+
+      if (characterUUID.isEmpty) {
+        callback(jsonEncode(
+            {"status": "fail", "msg": "characterUUID不能为空", "data": {}}));
+        return;
+      }
+
+      final bluetoothService = BluetoothDeviceManager();
+      final success = await bluetoothService.connectToDevice(
+        identifier: identifier,
+        serviceUUID: serviceUUID,
+        characterUUID: characterUUID,
+      );
+
+      if (success) {
+        callback(jsonEncode({"status": "success", "msg": "蓝牙已连接", "data": {}}));
+      } else {
+        callback(jsonEncode({"status": "fail", "msg": "连接失败", "data": {}}));
+      }
+    } catch (e) {
+      callback(
+          jsonEncode({"status": "fail", "msg": "连接蓝牙设备失败: $e", "data": {}}));
+    }
+  }
+}
+
+class _DisconnectBtDeviceHandler implements BridgeHandler {
+  @override
+  void call(dynamic data, Function(String) callback) async {
+    try {
+      final disconnectData = data is String ? jsonDecode(data) : data;
+      final identifier = disconnectData['identifier'] as String;
+
+      if (identifier.isEmpty) {
+        callback(
+            jsonEncode({"status": "fail", "msg": "mac地址不能为空", "data": {}}));
+        return;
+      }
+
+      final bluetoothService = BluetoothDeviceManager();
+      final success = await bluetoothService.disconnectDevice(identifier);
+
+      if (success) {
+        callback(
+            jsonEncode({"status": "success", "msg": "设备已断开连接", "data": {}}));
+      } else {
+        callback(jsonEncode({"status": "fail", "msg": "断开连接失败", "data": {}}));
+      }
+    } catch (e) {
+      callback(
+          jsonEncode({"status": "fail", "msg": "断开蓝牙设备失败: $e", "data": {}}));
+    }
   }
 }

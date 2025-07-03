@@ -25,8 +25,6 @@ import '../pages/profile/delete_account_page.dart';
 import '../pages/launch_advert_page.dart';
 import '../pages/platform_select_page.dart';
 import '../pages/web_home_page.dart';
-import '../pages/bridge_test_page.dart';
-import '../pages/bridge_unified_test_page.dart';
 import '../pages/token_test_page.dart';
 
 class AppRouter {
@@ -45,20 +43,6 @@ class AppRouter {
         path: '/test-back',
         name: 'test-back',
         builder: (context, state) => const TestBackButtonPage(),
-      ),
-
-      // Bridge测试页面
-      GoRoute(
-        path: '/bridge-test',
-        name: 'bridge-test',
-        builder: (context, state) => const BridgeTestPage(),
-      ),
-
-      // 统一Bridge测试页面
-      GoRoute(
-        path: '/bridge-unified-test',
-        name: 'bridge-unified-test',
-        builder: (context, state) => const BridgeUnifiedTestPage(),
       ),
 
       // Token测试页面

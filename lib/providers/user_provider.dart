@@ -36,12 +36,10 @@ class UserProvider extends ChangeNotifier {
       if (user != null && user['token'] != null) {
         print('UserProvider.initializeUser: 用户信息有效，设置登录状态');
         _currentUser = User.fromJson(user);
-        // 尝试调接口校验token
         try {
           print('UserProvider.initializeUser: 获取用户详细信息');
-          await _fetchUserDetailInfo();
+          await _fetchAllUserRelatedData();
           _isLoggedIn = true;
-          await _loadHomeUrlInfo();
         } catch (e) {
           // token无效，清理本地缓存
           print('UserProvider.initializeUser: token无效，清理本地缓存');
@@ -73,25 +71,13 @@ class UserProvider extends ChangeNotifier {
       print('UserProvider.login: 保存用户基本信息');
       await UserService.saveUserInfo(user.toJson());
       _currentUser = user;
+
+      print('UserProvider.login: 获取用户详细信息');
+      await _fetchAllUserRelatedData();
+
       _isLoggedIn = true;
 
-      // 2. 获取全局配置
-      print('UserProvider.login: 获取全局配置');
-      await _fetchGlobalConfig();
-
-      // 3. 获取用户详细信息
-      print('UserProvider.login: 获取用户详细信息');
-      await _fetchUserDetailInfo();
-
-      // 4. 获取IM账号信息
-      print('UserProvider.login: 获取IM账号信息');
-      await _fetchImAccount();
-
-      // 5. 获取主页URL信息
-      print('UserProvider.login: 获取主页URL信息');
-      await _fetchHomeUrlInfo();
-
-      // 6. 通知登录成功
+      // 通知登录成功
       print('UserProvider.login: 登录流程完成，通知登录成功');
       notifyLoginSuccess();
     } catch (e) {
@@ -298,6 +284,16 @@ class UserProvider extends ChangeNotifier {
   /// 获取全局配置中的特定字段
   String? getGlobalConfigField(String field) {
     return _globalConfig?[field]?.toString();
+  }
+
+  /// 获取所有用户相关数据
+  Future<void> _fetchAllUserRelatedData() async {
+    await Future.wait([
+      _fetchUserDetailInfo(),
+      _fetchGlobalConfig(),
+      _fetchImAccount(),
+      _loadHomeUrlInfo(),
+    ]);
   }
 }
 

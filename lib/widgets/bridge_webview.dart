@@ -11,27 +11,7 @@ class BridgeWebView {
   final WebViewController controller;
   final Map<String, BridgeHandler> _handlers = {};
 
-  BridgeWebView({required this.controller}) {
-    // _initBridge();
-  }
-
-  /// 初始化Bridge
-  // void _initBridge() {
-  //   print('[Bridge] 初始化Bridge');
-  //   // 注入JavaScript Bridge代码
-  //   _injectBridgeScript();
-  // }
-
-  /// 注入统一的Bridge脚本
-  // void _injectBridgeScript() {
-  //   // 使用统一的Bridge实现
-  //   controller.runJavaScript('''
-  //     // 加载统一的Bridge脚本
-  //     var script = document.createElement('script');
-  //     script.src = 'assets/js/flutter_bridge_unified.js';
-  //     document.head.appendChild(script);
-  //   ''');
-  // }
+  BridgeWebView({required this.controller});
 
   /// 注册处理器
   void registerHandler(String handlerName, BridgeHandler handler) {
@@ -144,6 +124,7 @@ class BridgeWebViewWidget extends StatefulWidget {
   final void Function(String url)? onPageFinished;
   final void Function(String url)? onNavigationRequest;
   final GlobalKey<NavigationBarWidgetState>? navKey;
+  final WebViewController? webViewController;
 
   const BridgeWebViewWidget({
     required this.initialUrl,
@@ -153,6 +134,7 @@ class BridgeWebViewWidget extends StatefulWidget {
     this.onPageFinished,
     this.onNavigationRequest,
     this.navKey,
+    this.webViewController,
   });
 
   @override
@@ -169,7 +151,7 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController();
+    _controller = widget.webViewController ?? WebViewController();
 
     navKey = widget.navKey ?? GlobalKey<NavigationBarWidgetState>();
 
@@ -192,8 +174,18 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
 
     _controller.setNavigationDelegate(
       NavigationDelegate(
+        onPageStarted: (String url) {
+          widget.onPageStarted?.call(url);
+        },
         onPageFinished: (String url) async {
-          if (_isInitialized) return;
+          widget.onPageFinished?.call(url);
+
+          if (_isInitialized) {
+            // 页面加载完成后检查历史状态
+            _updateNavigationBarHistory();
+            return;
+          }
+
           _isInitialized = true;
 
           // 注入Bridge脚本
@@ -212,10 +204,31 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
             _bridgeWebView!.registerHandler(name, handler);
           });
 
+          // 初始化完成后检查历史状态
+          _updateNavigationBarHistory();
+
           print('[Bridge] WebViewJavascriptBridge注入完成');
+        },
+        onNavigationRequest: (NavigationRequest request) {
+          widget.onNavigationRequest?.call(request.url);
+          return NavigationDecision.navigate;
+        },
+        onUrlChange: (UrlChange change) {
+          // URL 变化时检查历史状态
+          _updateNavigationBarHistory();
         },
       ),
     );
+  }
+
+  // 新增：更新导航栏历史状态
+  Future<void> _updateNavigationBarHistory() async {
+    try {
+      final canGoBack = await _controller.canGoBack();
+      navKey.currentState?.updateWebViewHistory(canGoBack);
+    } catch (e) {
+      print('[Bridge] 更新导航栏历史状态失败: $e');
+    }
   }
 
   @override

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class NavigationBarWidget extends StatefulWidget {
   final String title;
@@ -7,6 +9,11 @@ class NavigationBarWidget extends StatefulWidget {
   final Color? titleColor;
   final Color? itemColor;
   final String? backgroundImage;
+  final void Function(BuildContext context)? onBack;
+  final void Function(BuildContext context)? onHome;
+  final void Function(BuildContext context)? onMore;
+  final void Function(BuildContext context)? onScan;
+  final void Function(BuildContext context)? onMessage;
 
   const NavigationBarWidget({
     super.key,
@@ -16,6 +23,11 @@ class NavigationBarWidget extends StatefulWidget {
     this.titleColor,
     this.itemColor,
     this.backgroundImage,
+    this.onBack,
+    this.onHome,
+    this.onMore,
+    this.onScan,
+    this.onMessage,
   });
 
   @override
@@ -29,6 +41,7 @@ class NavigationBarWidgetState extends State<NavigationBarWidget> {
   Color? _titleColor;
   Color? _itemColor;
   String? _backgroundImage;
+  bool _canGoBack = false; // 新增：WebView 是否可以返回
 
   @override
   void initState() {
@@ -39,6 +52,36 @@ class NavigationBarWidgetState extends State<NavigationBarWidget> {
     _titleColor = widget.titleColor;
     _itemColor = widget.itemColor;
     _backgroundImage = widget.backgroundImage;
+
+    // 初始化时检查 WebView 历史状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkWebViewHistory();
+    });
+  }
+
+  // 新增：检查 WebView 历史状态
+  Future<void> _checkWebViewHistory() async {
+    try {
+      final webViewController = context.read<WebViewController>();
+      final canGoBack = await webViewController.canGoBack();
+      if (mounted && _canGoBack != canGoBack) {
+        setState(() {
+          _canGoBack = canGoBack;
+        });
+      }
+    } catch (e) {
+      // WebViewController 可能不存在，忽略错误
+      print('NavigationBarWidget: 无法获取 WebView 历史状态: $e');
+    }
+  }
+
+  // 新增：更新 WebView 历史状态的方法，供外部调用
+  void updateWebViewHistory(bool canGoBack) {
+    if (mounted && _canGoBack != canGoBack) {
+      setState(() {
+        _canGoBack = canGoBack;
+      });
+    }
   }
 
   // 提供方法供JSSDK调用
@@ -60,36 +103,35 @@ class NavigationBarWidgetState extends State<NavigationBarWidget> {
     });
   }
 
-  void _onBackPressed() {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).maybePop();
-    } else {
-      // 可自定义其它返回逻辑
-    }
+  void _onBackPressed() async {
+    // 先执行返回操作
+    widget.onBack?.call(context);
+
+    // 返回操作后检查历史状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkWebViewHistory();
+    });
   }
 
   void _onMorePressed() {
-    Scaffold.of(context).openDrawer();
+    widget.onMore?.call(context);
   }
 
   void _onHomePressed() {
-    // TODO: 跳转到主页，需根据实际路由实现
-    // Navigator.of(context).pushReplacementNamed('/home');
+    widget.onHome?.call(context);
   }
 
   void _onScanPressed() {
-    // TODO: 打开扫码页，需根据实际路由实现
-    // Navigator.of(context).pushNamed('/scan');
+    widget.onScan?.call(context);
   }
 
   void _onMessagePressed() {
-    // TODO: 跳转消息列表，需根据实际路由实现
-    // Navigator.of(context).pushNamed('/messages');
+    widget.onMessage?.call(context);
   }
 
+  // 修改：将 Future<bool> 改为同步的 bool 计算属性
   bool get _shouldShowBack {
-    // TODO: 服务窗页面不显示返回按钮，需补充实际判断
-    return _showBack && Navigator.of(context).canPop();
+    return _showBack && _canGoBack;
   }
 
   bool isNetworkUrl(String? url) {

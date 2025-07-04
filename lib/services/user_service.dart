@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unified_front_end/api/cloud_api.dart';
 import '../models/home_url_info.dart';
 
 class UserService {

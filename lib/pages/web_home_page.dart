@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:unified_front_end/providers/user_provider.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 // import 'package:go_router/go_router.dart';
 // import 'package:provider/provider.dart';
 // import '../providers/user_provider.dart';
@@ -26,112 +30,95 @@ class _WebHomePageState extends State<WebHomePage> {
   String _currentTitle = '';
   final GlobalKey<NavigationBarWidgetState> _navKey =
       GlobalKey<NavigationBarWidgetState>();
-
+  late WebViewController _webViewController;
   @override
   void initState() {
     super.initState();
     _currentTitle = widget.title ?? '统一前端';
+    _webViewController = WebViewController();
   }
 
-  // void _goBack() {
-  //   _exitApp();
-  // }
+  Future<void> _goBack(BuildContext context) async {
+    // _exitApp();
+    // 判断webview内部的网站有没有history，有history则返回上一页，没有history则返回主页
+    // 获取webview内部的网站的history
+    final canGoBack = await _webViewController.canGoBack();
+    if (canGoBack) {
+      // 有history则返回上一页
+      await _webViewController.goBack();
+    } else {
+      // 没有history则返回主页
+      Navigator.of(context).pop();
+    }
+  }
 
-  // void _exitApp() {
-  //   if (widget.isHome) {
-  //     // 如果是主页，显示退出确认对话框
-  //     showDialog(
-  //       context: context,
-  //       builder: (context) => AlertDialog(
-  //         title: const Text('退出应用'),
-  //         content: const Text('确定要退出应用吗？'),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () => Navigator.of(context).pop(),
-  //             child: const Text('取消'),
-  //           ),
-  //           TextButton(
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //               // 退出应用
-  //               SystemNavigator.pop();
-  //             },
-  //             child: const Text('确定'),
-  //           ),
-  //         ],
-  //       ),
-  //     );
-  //   } else {
-  //     // 如果不是主页，返回上一页
-  //     context.pop();
-  //   }
-  // }
+  void _goHome(BuildContext context) {
+    final userProvider = context.read<UserProvider>();
+    final homeUrlInfo = userProvider.getHomeUrlInfo();
+    print('homeUrlInfo: $homeUrlInfo');
+    if (homeUrlInfo != null &&
+        homeUrlInfo.indexUrl != null &&
+        homeUrlInfo.indexUrl!.isNotEmpty) {
+      // 重新加载主页URL - 通过导航到新的页面来实现
+      context.go(
+          '/web-home?url=${Uri.encodeComponent(homeUrlInfo.indexUrl!)}&isHome=true');
+    } else {
+      context.go('/platform-home');
+    }
+  }
 
-  // void _goHome() {
-  //   final userProvider = context.read<UserProvider>();
-  //   final homeUrlInfo = userProvider.getHomeUrlInfo();
-
-  //   if (homeUrlInfo != null &&
-  //       homeUrlInfo.indexUrl != null &&
-  //       homeUrlInfo.indexUrl!.isNotEmpty) {
-  //     // 重新加载主页URL - 通过导航到新的页面来实现
-  //     context.go(
-  //         '/web-home?url=${Uri.encodeComponent(homeUrlInfo.indexUrl!)}&isHome=true');
-  //   }
-  // }
-
-  // void _showMoreMenu() {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     builder: (context) => Container(
-  //       padding: const EdgeInsets.all(16),
-  //       child: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           ListTile(
-  //             leading: const Icon(Icons.refresh),
-  //             title: const Text('刷新'),
-  //             onTap: () {
-  //               Navigator.of(context).pop();
-  //               // 重新加载页面
-  //               context.go(
-  //                   '/web-home?url=${Uri.encodeComponent(widget.url ?? 'https://example.com')}&isHome=${widget.isHome}');
-  //             },
-  //           ),
-  //           ListTile(
-  //             leading: const Icon(Icons.home),
-  //             title: const Text('返回主页'),
-  //             onTap: () {
-  //               Navigator.of(context).pop();
-  //               _goHome();
-  //             },
-  //           ),
-  //           ListTile(
-  //             leading: const Icon(Icons.settings),
-  //             title: const Text('设置'),
-  //             onTap: () {
-  //               Navigator.of(context).pop();
-  //               context.push('/settings');
-  //             },
-  //           ),
-  //           ListTile(
-  //             leading: const Icon(Icons.logout),
-  //             title: const Text('退出登录'),
-  //             onTap: () async {
-  //               Navigator.of(context).pop();
-  //               final userProvider = context.read<UserProvider>();
-  //               await userProvider.logout();
-  //               if (mounted) {
-  //                 // ignore: use_build_context_synchronously
-  //                 context.go('/verification-login');
-  //               }
-  //             },
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
+  void _showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.refresh),
+              title: const Text('刷新'),
+              onTap: () {
+                Navigator.of(context).pop();
+                // 重新加载页面
+                context.go(
+                    '/web-home?url=${Uri.encodeComponent(widget.url ?? 'https://example.com')}&isHome=${widget.isHome}');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('返回主页'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _goHome(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('设置'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/settings');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('退出登录'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                final userProvider = context.read<UserProvider>();
+                await userProvider.logout();
+                if (mounted) {
+                  // ignore: use_build_context_synchronously
+                  context.go('/verification-login');
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +132,9 @@ class _WebHomePageState extends State<WebHomePage> {
           backgroundColor: Colors.white,
           titleColor: Colors.black87,
           itemColor: Colors.black87,
+          onBack: _goBack,
+          onHome: _goHome,
+          onMore: _showMoreMenu,
         ),
       ),
       body: _WebViewWithNavigation(
@@ -160,6 +150,7 @@ class _WebHomePageState extends State<WebHomePage> {
         onNavigationRequest: (url) {
           // 导航请求处理
         },
+        webViewController: _webViewController,
       ),
     );
   }
@@ -173,6 +164,7 @@ class _WebViewWithNavigation extends StatefulWidget {
   final Function(String)? onPageStarted;
   final Function(String)? onPageFinished;
   final Function(String)? onNavigationRequest;
+  final WebViewController? webViewController;
 
   const _WebViewWithNavigation({
     required this.url,
@@ -181,6 +173,7 @@ class _WebViewWithNavigation extends StatefulWidget {
     this.onPageStarted,
     this.onPageFinished,
     this.onNavigationRequest,
+    this.webViewController,
   });
 
   @override
@@ -197,6 +190,7 @@ class _WebViewWithNavigationState extends State<_WebViewWithNavigation> {
       onPageFinished: widget.onPageFinished,
       onNavigationRequest: widget.onNavigationRequest,
       navKey: widget.navKey, // 传递导航条key
+      webViewController: widget.webViewController,
     );
   }
 }

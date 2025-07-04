@@ -1,6 +1,6 @@
 # Flutter Bridge WebView 完整实现
 
-基于安卓JSSDK Bridge分析，为Flutter应用实现了完整的WebView Bridge通讯系统。
+基于统一Bridge架构，为Flutter应用实现了完整的WebView Bridge通讯系统，支持Flutter与H5的双向通信。
 
 ## 文件结构
 
@@ -9,115 +9,178 @@ lib/
 ├── utils/
 │   └── bridge/
 │       ├── bridge_handler.dart      # Bridge处理器接口和数据模型
-│       ├── bridge_webview.dart      # Bridge WebView核心实现
 │       └── jssdk_handlers.dart      # 所有JSSDK方法处理器
 ├── widgets/
-│   ├── bridge_webview.dart          # Bridge WebView组件
-│   └── compatible_webview.dart      # 兼容性WebView组件
-├── pages/
-│   └── bridge_demo_page.dart        # Bridge演示页面
+│   ├── bridge_webview.dart          # Bridge WebView核心组件
+│   ├── compatible_webview.dart      # 兼容性WebView组件
+│   └── navigation_bar_widget.dart   # 导航栏组件
 └── assets/
     └── js/
-        └── webview_javascript_bridge.js  # JavaScript Bridge文件
+        └── flutter_bridge_unified.js # 统一JavaScript Bridge文件
 ```
+
+## 统一Bridge架构
+
+### 核心文件
+
+#### 1. 统一Bridge实现
+- **文件**: `assets/js/flutter_bridge_unified.js`
+- **作用**: 提供统一的Bridge实现，完全兼容WebViewJavascriptBridge API
+- **特点**: 
+  - 直接使用FlutterBridge作为底层通道
+  - 保持完整的API兼容性
+  - 支持SDK的所有功能
+
+#### 2. Bridge WebView组件
+- **文件**: `lib/widgets/bridge_webview.dart`
+- **作用**: 核心Bridge WebView实现
+- **功能**: 
+  - WebView控制器管理
+  - Bridge初始化
+  - JSSDK处理器注册
+  - 消息处理
+
+#### 3. 兼容性WebView组件
+- **文件**: `lib/widgets/compatible_webview.dart`
+- **作用**: 跨平台WebView兼容层
+- **支持**: Android、iOS、Web平台
 
 ## 初始化流程
 
-### 1. 用户登录成功后跳转
+### 1. Bridge WebView初始化
 
 ```dart
-// 在登录成功后，跳转到Bridge WebView页面
-Navigator.of(context).pushReplacement(
-  MaterialPageRoute(
-    builder: (context) => BridgeWebViewPage(
-      url: homeUrl,
-      title: '主页',
-      isHome: true,
-    ),
-  ),
-);
-```
+class BridgeWebViewWidget extends StatefulWidget {
+  final String initialUrl;
+  final GlobalKey<NavigationBarWidgetState>? navKey;
 
-### 2. Bridge WebView初始化
+  @override
+  State<BridgeWebViewWidget> createState() => _BridgeWebViewWidgetState();
+}
 
-```dart
-class _BridgeWebViewState extends State<BridgeWebView> {
+class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
   late final WebViewController _controller;
-  late final bridge.BridgeWebView _bridgeWebView;
+  BridgeWebView? _bridgeWebView;
+  String? _bridgeScript;
 
   @override
   void initState() {
     super.initState();
-    _initWebView();
-  }
-
-  void _initWebView() {
-    // 1. 创建WebViewController
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(NavigationDelegate(...))
-      ..loadRequest(Uri.parse(widget.url));
-
-    // 2. 初始化Bridge
-    _bridgeWebView = bridge.BridgeWebView(controller: _controller);
+    _controller = WebViewController();
     
-    // 3. 注册所有JSSDK处理器
-    _registerHandlers();
-  }
-}
-```
+    // 初始化JSSDK handlers
+    JSSDKHandlers.initHandlers(context, navKey);
 
-### 3. Bridge核心初始化
+    // 预加载本地js内容
+    rootBundle.loadString('assets/js/flutter_bridge_unified.js').then((js) {
+      _bridgeScript = js;
+    });
 
-```dart
-class BridgeWebView {
-  BridgeWebView({required this.controller}) {
-    _initBridge();
-  }
-
-  void _initBridge() {
-    // 1. 注入JavaScript Bridge代码
-    _injectBridgeScript();
-    
-    // 2. 设置JavaScript通道
-    controller.addJavaScriptChannel(
+    // 设置JavaScript通道
+    _controller.addJavaScriptChannel(
       'FlutterBridge',
       onMessageReceived: (JavaScriptMessage message) {
-        _handleJavaScriptMessage(message.message);
+        if (_bridgeWebView != null) {
+          _bridgeWebView!.handleJavaScriptMessage(message.message);
+        }
       },
     );
   }
 }
 ```
 
-### 4. JavaScript Bridge注入
+### 2. Bridge核心初始化
 
 ```dart
-void _injectBridgeScript() {
-  const bridgeScript = '''
-    (function() {
-      // JavaScript Bridge实现代码
-      // 创建全局FlutterWebViewJavascriptBridge对象
-      // 设置消息队列和回调机制
-    })();
-  ''';
-  
-  controller.runJavaScript(bridgeScript);
+class BridgeWebView {
+  final WebViewController controller;
+  final Map<String, BridgeHandler> _handlers = {};
+
+  BridgeWebView({required this.controller});
+
+  /// 注册处理器
+  void registerHandler(String handlerName, BridgeHandler handler) {
+    _handlers[handlerName] = handler;
+  }
+
+  /// 处理JavaScript消息
+  void handleJavaScriptMessage(String message) {
+    try {
+      final messageData = jsonDecode(message);
+      final bridgeMessage = BridgeMessage.fromJson(messageData);
+      
+      final handler = _handlers[bridgeMessage.handlerName];
+      if (handler != null) {
+        handler.call(bridgeMessage.data, (response) {
+          _sendResponseToJavaScript(bridgeMessage.callbackId, response);
+        });
+      }
+    } catch (e) {
+      print('[Bridge] 处理消息异常: $e');
+    }
+  }
 }
 ```
 
-### 5. JSSDK处理器注册
+### 3. JSSDK处理器注册
 
 ```dart
-void _registerHandlers() {
-  // 初始化所有处理器
-  JSSDKHandlers.initHandlers(context);
-  
-  // 注册所有处理器
-  final handlers = JSSDKHandlers.getAllHandlers();
-  handlers.forEach((handlerName, handler) {
-    _bridgeWebView.registerHandler(handlerName, handler);
-  });
+class JSSDKHandlers {
+  static final Map<String, BridgeHandler> handlers = {};
+
+  /// 初始化所有处理器
+  static void initHandlers(BuildContext context, GlobalKey<NavigationBarWidgetState> navKey) {
+    // 基础功能
+    handlers['setPortrait'] = _SetPortraitHandler();
+    handlers['setLandscape'] = _SetLandscapeHandler();
+    handlers['getToken'] = _GetTokenHandler();
+    handlers['saveHomeUrl'] = _SaveHomeUrlHandler();
+    handlers['openLink'] = _OpenLinkHandler();
+    handlers['showFloat'] = _ShowFloatHandler();
+    handlers['preRefresh'] = _PreRefreshHandler();
+    handlers['setNavigation'] = _SetNavigationHandler(navKey);
+
+    // 权限相关
+    handlers['getCameraAuth'] = _GetCameraAuthHandler();
+    handlers['getLocationAuth'] = _GetLocationAuthHandler();
+    handlers['getMicrophoneAuth'] = _GetMicrophoneAuthHandler();
+    handlers['getCalendarsAuth'] = _GetCalendarsAuthHandler();
+    handlers['getStorageAuth'] = _GetStorageAuthHandler();
+    handlers['getBluetoothAuth'] = _GetBluetoothAuthHandler();
+    handlers['getAddressBook'] = _GetAddressBookHandler();
+
+    // 用户信息
+    handlers['getUserInfo'] = _GetUserInfoHandler();
+    handlers['getSessionStorage'] = _GetSessionStorageHandler();
+    handlers['autoLogin'] = _AutoLoginHandler();
+    handlers['reStartLogin'] = _ReStartLoginHandler();
+
+    // 设备信息
+    handlers['getDeviceInfo'] = _GetDeviceInfoHandler();
+    handlers['getMobileDeviceInformation'] = _GetMobileDeviceInformationHandler();
+
+    // 网络功能
+    handlers['getNetworkConnectType'] = _GetNetworkConnectTypeHandler();
+
+    // 数据存储
+    handlers['saveH5Data'] = _SaveH5DataHandler();
+    handlers['getH5Data'] = _GetH5DataHandler();
+
+    // 系统功能
+    handlers['setCanInterceptBackKey'] = _SetCanInterceptBackKeyHandler();
+    handlers['checkAppVersion'] = _CheckAppVersionHandler();
+    handlers['deleteAccount'] = _DeleteAccountHandler();
+    handlers['uploadLogFile'] = _UploadLogFileHandler();
+
+    // 应用启动
+    handlers['launchApp'] = _LaunchAppHandler();
+
+    // 蓝牙功能
+    handlers['checkBtEnable'] = _CheckBtEnableHandler();
+    handlers['getBtDeviceList'] = _GetBtDeviceListHandler();
+    handlers['connectToBtDevice'] = _ConnectToBtDeviceHandler();
+    handlers['disconnectBtDevice'] = _DisconnectBtDeviceHandler();
+  }
 }
 ```
 
@@ -165,13 +228,22 @@ void _registerHandlers() {
 - `deleteAccount` - 删除账号
 - `uploadLogFile` - 上传日志文件
 
+### 应用启动 (1个)
+- `launchApp` - 启动指定应用
+
+### 蓝牙功能 (4个)
+- `checkBtEnable` - 检查蓝牙是否可用
+- `getBtDeviceList` - 获取蓝牙设备列表
+- `connectToBtDevice` - 连接蓝牙设备
+- `disconnectBtDevice` - 断开蓝牙设备
+
 ## 通讯机制
 
 ### 1. JavaScript调用Flutter
 
 ```javascript
 // 调用Flutter方法
-window.FlutterWebViewJavascriptBridge.callHandler('getToken', null, function(response) {
+window.WebViewJavascriptBridge.callHandler('getToken', null, function(response) {
     console.log('Token:', response);
 });
 
@@ -186,9 +258,13 @@ window.getToken(function(response) {
 ```dart
 class _GetTokenHandler implements BridgeHandler {
   @override
-  void call(String data, Function(String) callback) {
-    final token = "mock_token_123456";
-    callback(BridgeResponse.success(data: {'token': token}).toJsonString());
+  void call(dynamic data, Function(String) callback) async {
+    try {
+      final token = await UserService.getToken();
+      callback(BridgeResponse.success(data: {'token': token}).toJsonString());
+    } catch (e) {
+      callback(BridgeResponse.error(msg: '获取Token失败: $e').toJsonString());
+    }
   }
 }
 ```
@@ -210,7 +286,7 @@ class _GetTokenHandler implements BridgeHandler {
   "status": "success",
   "msg": "成功",
   "data": {
-    "token": "mock_token_123456"
+    "token": "user_token_123456"
   }
 }
 ```
@@ -220,90 +296,130 @@ class _GetTokenHandler implements BridgeHandler {
 ### 1. 基本使用
 
 ```dart
-// 打开Bridge WebView页面
-Navigator.of(context).push(
-  MaterialPageRoute(
-    builder: (context) => BridgeWebViewPage(
-      url: 'https://example.com',
-      title: '示例页面',
-    ),
-  ),
-);
-```
-
-### 2. 自定义配置
-
-```dart
-BridgeWebView(
+// 在页面中使用CompatibleWebView
+CompatibleWebView(
   url: 'https://example.com',
-  title: '自定义页面',
-  isHome: true,
-  isShowClose: false,
+  title: '示例页面',
   onPageStarted: (url) => print('页面开始加载: $url'),
   onPageFinished: (url) => print('页面加载完成: $url'),
   onNavigationRequest: (url) => print('导航请求: $url'),
-  onError: (error) => print('页面错误: $error'),
+)
+```
+
+### 2. 带导航栏的WebView
+
+```dart
+// 在WebHomePage中使用
+WebHomePage(
+  title: '页面标题',
+  url: 'https://example.com',
+  isHome: true,
 )
 ```
 
 ### 3. JavaScript端使用
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Bridge测试</title>
-</head>
-<body>
-    <button onclick="testBridge()">测试Bridge</button>
-    <div id="result"></div>
+```javascript
+// 获取Token
+window.WebViewJavascriptBridge.callHandler('getToken', {}, function(response) {
+    if (response.status === 'success') {
+        console.log('Token:', response.data.token);
+    }
+});
 
-    <script>
-        // 等待Bridge初始化
-        document.addEventListener('FlutterWebViewJavascriptBridgeReady', function(event) {
-            console.log('Bridge已就绪');
-        });
+// 保存主页URL
+window.WebViewJavascriptBridge.callHandler('saveHomeUrl', {
+    indexUrl: 'https://example.com/home',
+    windowsName: '主页'
+}, function(response) {
+    console.log('保存结果:', response);
+});
 
-        function testBridge() {
-            // 获取Token
-            window.getToken(function(response) {
-                document.getElementById('result').textContent = 
-                    'Token: ' + JSON.stringify(response);
-            });
-        }
-    </script>
-</body>
-</html>
+// 打开链接
+window.WebViewJavascriptBridge.callHandler('openLink', {
+    url: 'https://example.com/new-page',
+    title: '新页面',
+    isHome: false
+}, function(response) {
+    console.log('打开结果:', response);
+});
 ```
 
-## 依赖包
+## 兼容性保证
 
-在`pubspec.yaml`中添加以下依赖：
+### 1. API兼容性
+统一Bridge完全实现了WebViewJavascriptBridge的所有API：
 
-```yaml
-dependencies:
-  webview_flutter: ^4.4.2
-  permission_handler: ^11.1.0
-  device_info_plus: ^9.1.1
-  connectivity_plus: ^5.0.2
-  shared_preferences: ^2.2.2
-  url_launcher: ^6.2.2
+```javascript
+// 核心方法
+window.WebViewJavascriptBridge.callHandler(handlerName, data, callback)
+window.WebViewJavascriptBridge.registerHandler(handlerName, handler)
+window.WebViewJavascriptBridge.send(data, callback)
+window.WebViewJavascriptBridge.init(messageHandler)
+
+// 便捷方法
+window.getToken(callback)
+window.getUserInfo(callback)
+window.getDeviceInfo(callback)
 ```
+
+### 2. 事件系统兼容性
+- 支持 `WebViewJavascriptBridgeReady` 事件
+- 支持 `WVJBCallbacks` 机制
+- 支持SDK的事件监听
+
+### 3. 跨平台兼容性
+- **Android**: 使用 `webview_flutter` 插件
+- **iOS**: 使用 `webview_flutter` 插件
+- **Web**: 使用 `HtmlElementView` 和 iframe
+
+## 优势
+
+### 1. 架构简化
+- 统一的Bridge实现
+- 减少中间环节
+- 代码更简洁
+
+### 2. 性能提升
+- 直接使用FlutterBridge通道
+- 降低内存占用
+- 提高响应速度
+
+### 3. 维护性
+- 单一实现，易于维护
+- 统一的错误处理
+- 更好的调试体验
+
+### 4. 兼容性
+- 完全向后兼容
+- 无需修改现有SDK
+- 支持渐进式迁移
 
 ## 注意事项
 
-1. **权限配置**：在Android和iOS平台需要配置相应的权限
-2. **JavaScript注入**：确保在页面加载完成后注入Bridge脚本
-3. **错误处理**：所有处理器都应该包含适当的错误处理
-4. **内存管理**：及时清理回调函数避免内存泄漏
-5. **平台兼容**：确保在不同平台上的一致性
+### 1. 加载顺序
+确保FlutterBridge通道在Bridge脚本加载前已创建：
+```dart
+// 在WebView初始化时创建通道
+controller.addJavaScriptChannel(
+  'FlutterBridge',
+  onMessageReceived: (message) {
+    // 处理消息
+  },
+);
+```
 
-## 扩展功能
+### 2. 错误处理
+统一Bridge包含完善的错误处理：
+- FlutterBridge通道不存在时的降级处理
+- 消息解析异常的处理
+- 回调函数丢失的处理
 
-可以根据需要添加更多JSSDK方法：
+### 3. 调试支持
+- 详细的日志输出
+- 错误信息提示
+- 状态检查功能
 
-1. 在`jssdk_handlers.dart`中添加新的处理器
-2. 在`JSSDKHandlers.initHandlers()`中注册新处理器
-3. 在JavaScript Bridge文件中添加便捷方法
+## 总结
 
-这个实现提供了完整的Flutter WebView Bridge通讯系统，支持双向通信和丰富的原生功能调用。 
+统一Bridge方案在保持完全兼容性的前提下，简化了架构，提升了性能，为后续的功能扩展和维护提供了更好的基础。通过完整的JSSDK方法支持，实现了Flutter与H5的无缝通信。 

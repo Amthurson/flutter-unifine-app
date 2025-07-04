@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:unified_front_end/api/cloud_api.dart';
+import 'package:unified_front_end/models/home_url_info.dart';
+import 'package:unified_front_end/services/user_service.dart';
 import '../providers/user_provider.dart';
 
 /// 导航工具类
@@ -8,7 +11,7 @@ import '../providers/user_provider.dart';
 class NavigationUtils {
   /// 登录后跳转至主页面
   /// 对应Android项目中的MainJumpUtils.jumpMainBridgeActivity方法
-  static void jumpMainBridgeActivity(BuildContext context) {
+  static Future<void> jumpMainBridgeActivity(BuildContext context) async {
     final userProvider = context.read<UserProvider>();
     print(
         'NavigationUtils.jumpMainBridgeActivity: 用户信息: ${userProvider.homeUrlInfo}');
@@ -16,7 +19,18 @@ class NavigationUtils {
     if (userProvider.hasHomeUrlInfo) {
       // 有主页URL信息，跳转到广告页
       final homeUrlInfo = userProvider.homeUrlInfo!;
-      context.go('/launch-advert', extra: homeUrlInfo);
+      final windowsConfig =
+          await CloudApi.getWindowsConfig(homeUrlInfo.windowsId);
+      // merge 一下当前的homeUrlInfo和windowsConfig
+      final newHomeUrlInfo = HomeUrlInfo.fromJson(
+        {
+          ...homeUrlInfo.toJson(),
+          ...windowsConfig,
+        },
+      );
+      // 保存windowsConfig
+      await UserService.saveHomeUrlInfo(newHomeUrlInfo);
+      context.go('/launch-advert', extra: newHomeUrlInfo);
     } else {
       // 没有主页URL信息，跳转到平台选择页
       context.go('/platform-select');

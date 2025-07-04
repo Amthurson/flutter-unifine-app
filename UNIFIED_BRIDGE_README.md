@@ -38,19 +38,19 @@ Flutter WebView
   - 保持完整的API兼容性
   - 支持SDK的所有功能
 
-### 2. 测试页面
-- **文件**: `assets/test_unified.html`
-- **作用**: 验证统一Bridge的功能和兼容性
-- **测试项目**:
-  - Bridge状态检查
-  - 基础功能测试
-  - SDK兼容性测试
-  - 事件系统测试
-  - 错误处理测试
-
-### 3. Flutter集成
+### 2. Bridge WebView组件
 - **文件**: `lib/widgets/bridge_webview.dart`
-- **修改**: 简化Bridge注入逻辑，使用统一的Bridge脚本
+- **作用**: 核心Bridge WebView实现
+- **功能**: 
+  - WebView控制器管理
+  - Bridge初始化
+  - JSSDK处理器注册
+  - 消息处理
+
+### 3. JSSDK处理器
+- **文件**: `lib/utils/bridge/jssdk_handlers.dart`
+- **作用**: 所有JSSDK方法的Flutter端处理器
+- **包含**: 基础功能、权限管理、用户信息、设备信息、蓝牙功能等
 
 ## 兼容性保证
 
@@ -77,7 +77,7 @@ window.getDeviceInfo(callback)
 - 支持SDK的事件监听
 
 ### 3. SDK兼容性
-基于你提供的SDK代码，统一Bridge支持：
+基于现有SDK代码，统一Bridge支持：
 
 ```typescript
 // SDK初始化
@@ -96,6 +96,210 @@ if (window.WVJBCallbacks) {
 
 // Bridge方法调用
 this.bridge.callHandler(handlerName, param, callback);
+```
+
+## 实现细节
+
+### 1. JavaScript端实现
+
+```javascript
+// flutter_bridge_unified.js
+(function() {
+    if (window.WebViewJavascriptBridge) {
+        console.log('[FlutterBridge] WebViewJavascriptBridge已存在，跳过初始化');
+        return;
+    }
+
+    console.log('[FlutterBridge] 开始初始化统一Bridge');
+
+    var messageHandlers = {};
+    var responseCallbacks = {};
+    var uniqueId = 1;
+
+    /**
+     * 发送消息到Flutter
+     */
+    function _sendMessage(message, responseCallback) {
+        if (responseCallback) {
+            var callbackId = 'cb_' + (uniqueId++) + '_' + new Date().getTime();
+            responseCallbacks[callbackId] = responseCallback;
+            message.callbackId = callbackId;
+        }
+
+        // 直接使用FlutterBridge发送
+        if (window.FlutterBridge) {
+            window.FlutterBridge.postMessage(JSON.stringify(message));
+        } else {
+            console.error('[FlutterBridge] FlutterBridge通道不存在');
+            if (responseCallback) {
+                responseCallback({ status: 'error', msg: 'FlutterBridge通道不存在' });
+            }
+        }
+    }
+
+    /**
+     * 处理来自Flutter的消息
+     */
+    function _dispatchMessageFromFlutter(messageJSON) {
+        setTimeout(function() {
+            try {
+                var message = JSON.parse(messageJSON);
+                var responseCallback;
+
+                if (message.responseId) {
+                    // 处理响应
+                    responseCallback = responseCallbacks[message.responseId];
+                    if (responseCallback) {
+                        responseCallback(message.responseData);
+                        delete responseCallbacks[message.responseId];
+                    }
+                } else {
+                    // 处理请求
+                    if (message.callbackId) {
+                        var callbackResponseId = message.callbackId;
+                        responseCallback = function(responseData) {
+                            _sendMessage({ 
+                                responseId: callbackResponseId, 
+                                responseData: responseData 
+                            });
+                        };
+                    }
+
+                    var handler = messageHandlers[message.handlerName];
+                    if (handler) {
+                        handler(message.data, responseCallback);
+                    } else {
+                        if (responseCallback) {
+                            responseCallback({ status: 'error', msg: '未找到处理器: ' + message.handlerName });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('[FlutterBridge] 处理消息异常:', e);
+            }
+        });
+    }
+
+    /**
+     * 创建全局对象 - 完全兼容WebViewJavascriptBridge API
+     */
+    window.WebViewJavascriptBridge = {
+        registerHandler: function(handlerName, handler) {
+            messageHandlers[handlerName] = handler;
+        },
+        callHandler: function(handlerName, data, responseCallback) {
+            _sendMessage({ 
+                handlerName: handlerName, 
+                data: data 
+            }, responseCallback);
+        },
+        send: function(data, responseCallback) {
+            _sendMessage(data, responseCallback);
+        },
+        init: function(messageHandler) {
+            if (WebViewJavascriptBridge._messageHandler) {
+                throw new Error('WebViewJavascriptBridge.init called twice');
+            }
+            WebViewJavascriptBridge._messageHandler = messageHandler;
+            
+            // 触发就绪事件
+            var readyEvent = document.createEvent('Events');
+            readyEvent.initEvent('WebViewJavascriptBridgeReady');
+            readyEvent.bridge = WebViewJavascriptBridge;
+            document.dispatchEvent(readyEvent);
+
+            // 处理WVJBCallbacks
+            if (window.WVJBCallbacks) {
+                window.WVJBCallbacks.forEach(function(callback) {
+                    callback(WebViewJavascriptBridge);
+                });
+                window.WVJBCallbacks = null;
+            }
+        },
+        _messageHandler: null
+    };
+
+    /**
+     * Flutter端调用此方法处理消息
+     */
+    window._handleMessageFromFlutter = function(messageJSON) {
+        _dispatchMessageFromFlutter(messageJSON);
+    };
+
+    /**
+     * 兼容SDK的WVJBCallbacks机制
+     */
+    if (!window.WVJBCallbacks) {
+        window.WVJBCallbacks = [];
+    }
+
+    /**
+     * 便捷方法
+     */
+    window.getToken = function(callback) {
+        WebViewJavascriptBridge.callHandler('getToken', {}, callback);
+    };
+
+    window.getUserInfo = function(callback) {
+        WebViewJavascriptBridge.callHandler('getUserInfo', null, callback);
+    };
+
+    window.getDeviceInfo = function(callback) {
+        WebViewJavascriptBridge.callHandler('getDeviceInfo', null, callback);
+    };
+})();
+```
+
+### 2. Flutter端实现
+
+```dart
+// bridge_webview.dart
+class BridgeWebView {
+  final WebViewController controller;
+  final Map<String, BridgeHandler> _handlers = {};
+
+  BridgeWebView({required this.controller});
+
+  /// 注册处理器
+  void registerHandler(String handlerName, BridgeHandler handler) {
+    _handlers[handlerName] = handler;
+  }
+
+  /// 处理JavaScript消息
+  void handleJavaScriptMessage(String message) {
+    try {
+      final messageData = jsonDecode(message);
+      final bridgeMessage = BridgeMessage.fromJson(messageData);
+      
+      final handler = _handlers[bridgeMessage.handlerName];
+      if (handler != null) {
+        handler.call(bridgeMessage.data, (response) {
+          _sendResponseToJavaScript(bridgeMessage.callbackId, response);
+        });
+      }
+    } catch (e) {
+      print('[Bridge] 处理消息异常: $e');
+    }
+  }
+
+  /// 发送响应到JavaScript
+  void _sendResponseToJavaScript(String? callbackId, String response) {
+    if (callbackId != null) {
+      final responseScript = '''
+        (function() {
+          var message = {
+            responseId: '$callbackId',
+            responseData: $response
+          };
+          if (window._handleMessageFromFlutter) {
+            window._handleMessageFromFlutter(JSON.stringify(message));
+          }
+        })();
+      ''';
+      controller.runJavaScript(responseScript);
+    }
+  }
+}
 ```
 
 ## 优势
@@ -124,9 +328,10 @@ this.bridge.callHandler(handlerName, param, callback);
 
 ### 1. 在Flutter中使用
 ```dart
-// 使用统一的BridgeWebViewWidget
+// 使用BridgeWebViewWidget
 BridgeWebViewWidget(
   initialUrl: 'your-url',
+  navKey: navKey,
   onWebViewCreated: (controller) {
     // 处理WebView创建
   },
@@ -146,10 +351,24 @@ window.WebViewJavascriptBridge.callHandler('getToken', {}, function(response) {
 });
 ```
 
-### 3. 测试统一方案
-```dart
-// 导航到统一Bridge测试页面
-context.go('/bridge-unified-test');
+### 3. 在H5页面中使用
+```javascript
+// 保存主页URL
+window.WebViewJavascriptBridge.callHandler('saveHomeUrl', {
+    indexUrl: 'https://example.com/home',
+    windowsName: '主页'
+}, function(response) {
+    console.log('保存结果:', response);
+});
+
+// 打开链接
+window.WebViewJavascriptBridge.callHandler('openLink', {
+    url: 'https://example.com/new-page',
+    title: '新页面',
+    isHome: false
+}, function(response) {
+    console.log('打开结果:', response);
+});
 ```
 
 ## 迁移指南
@@ -198,4 +417,6 @@ controller.addJavaScriptChannel(
 
 ## 总结
 
-统一Bridge方案在保持完全兼容性的前提下，简化了架构，提升了性能，为后续的功能扩展和维护提供了更好的基础。建议在充分测试后进行生产环境部署。 
+统一Bridge方案在保持完全兼容性的前提下，简化了架构，提升了性能，为后续的功能扩展和维护提供了更好的基础。通过完整的JSSDK方法支持，实现了Flutter与H5的无缝通信。
+
+建议在充分测试后进行生产环境部署，并持续监控系统性能和稳定性。 

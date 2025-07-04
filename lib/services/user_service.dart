@@ -80,14 +80,6 @@ class UserService {
     await prefs.remove(_homeUrlInfoKey);
   }
 
-  /// 请求接口并更新当前服务窗配置信息 getWindowsConfig
-  static Future<void> updateCurrentWindowsConfig() async {
-    final userInfo = await getUserInfo();
-    final windowsId = userInfo?['windowsId'];
-    final windowsConfig = await CloudApi.getWindowsConfig(windowsId);
-    await saveHomeUrlInfo(HomeUrlInfo.fromJson(windowsConfig));
-  }
-
   // ==================== 新增方法 ====================
 
   /// 退出登录

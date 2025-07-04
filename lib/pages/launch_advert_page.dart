@@ -6,11 +6,11 @@ import '../providers/user_provider.dart';
 import '../models/home_url_info.dart';
 
 class LaunchAdvertPage extends StatefulWidget {
-  final HomeUrlInfo? windowInfo;
+  final HomeUrlInfo? homeUrlInfo;
 
   const LaunchAdvertPage({
     super.key,
-    this.windowInfo,
+    this.homeUrlInfo,
   });
 
   @override
@@ -53,7 +53,7 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
   }
 
   Future<void> _fetchWindowInfo() async {
-    if (widget.windowInfo == null) return;
+    if (widget.homeUrlInfo == null) return;
 
     setState(() {
       _isLoading = true;
@@ -83,8 +83,8 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
     // 检查是否有主页URL信息
     final homeUrlInfo = context.read<UserProvider>().getHomeUrlInfo();
 
-    if (homeUrlInfo != null && 
-        homeUrlInfo.indexUrl != null && 
+    if (homeUrlInfo != null &&
+        homeUrlInfo.indexUrl != null &&
         homeUrlInfo.indexUrl!.isNotEmpty) {
       // 有主页URL，跳转到H5主页面
       context.go('/web-home', extra: {
@@ -109,7 +109,7 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
             child: Container(
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage(widget.windowInfo?.bannerUrl ??
+                  image: AssetImage(widget.homeUrlInfo?.bannerUrl ??
                       'assets/images/default_banner.jpg'),
                   fit: BoxFit.cover,
                 ),
@@ -136,9 +136,9 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
                   child: Column(
                     children: [
                       // 服务名称
-                      if (widget.windowInfo?.serviceName != null)
+                      if (widget.homeUrlInfo?.serviceName != null)
                         Text(
-                          widget.windowInfo!.serviceName!,
+                          widget.homeUrlInfo!.serviceName!,
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -150,9 +150,9 @@ class _LaunchAdvertPageState extends State<LaunchAdvertPage> {
                       const SizedBox(height: 8),
 
                       // 窗口名称
-                      if (widget.windowInfo?.windowsName != null)
+                      if (widget.homeUrlInfo?.windowsName != null)
                         Text(
-                          widget.windowInfo!.windowsName!,
+                          widget.homeUrlInfo!.windowsName!,
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.white70,

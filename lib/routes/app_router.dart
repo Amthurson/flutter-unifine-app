@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:unified_front_end/models/home_url_info.dart';
 import '../pages/splash_page.dart';
 import '../pages/auth/verification_login_page.dart';
 import '../pages/auth/password_login_page.dart';
@@ -92,7 +93,7 @@ class AppRouter {
         path: '/launch-advert',
         name: 'launch-advert',
         builder: (context, state) => LaunchAdvertPage(
-          windowInfo: state.extra as dynamic,
+          homeUrlInfo: state.extra as HomeUrlInfo?,
         ),
       ),
 

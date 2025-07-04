@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:unified_front_end/api/common_config_api.dart';
 import '../providers/user_provider.dart';
-import '../config/env_config.dart';
 import '../widgets/compatible_webview.dart';
 
 class PlatformSelectPage extends StatefulWidget {
@@ -70,7 +70,7 @@ class _PlatformSelectPageState extends State<PlatformSelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cloudAppUrl = '${EnvConfig.baseUrl}cloudApp/selectSys/index';
+    final cloudAppUrl = CommonConfig.workbenchSelectUrl;
 
     return Scaffold(
       appBar: AppBar(

@@ -33,25 +33,29 @@ class UserProvider extends ChangeNotifier {
       final user = await UserService.getUserInfo();
       print('UserProvider.initializeUser: 本地用户信息: $user');
 
-      if (user != null && user is User && user.token != null) {
+      if (user != null && user['token'] != null) {
         print('UserProvider.initializeUser: 用户信息有效，设置登录状态');
-        _currentUser = user as User;
-        _isLoggedIn = true;
-
-        // 初始化时获取用户详细信息
-        print('UserProvider.initializeUser: 获取用户详细信息');
-        await _fetchUserDetailInfo();
-
-        // 获取保存的主页URL信息
-        print('UserProvider.initializeUser: 获取保存的主页URL信息');
-        await _loadHomeUrlInfo();
-
-        print('UserProvider.initializeUser: 初始化完成，登录状态: $_isLoggedIn');
+        _currentUser = User.fromJson(user);
+        // 尝试调接口校验token
+        try {
+          print('UserProvider.initializeUser: 获取用户详细信息');
+          await _fetchUserDetailInfo();
+          _isLoggedIn = true;
+          await _loadHomeUrlInfo();
+        } catch (e) {
+          // token无效，清理本地缓存
+          print('UserProvider.initializeUser: token无效，清理本地缓存');
+          await UserService.clearUserInfo();
+          _currentUser = null;
+          _isLoggedIn = false;
+        }
       } else {
         print('UserProvider.initializeUser: 用户信息无效或为空');
+        _isLoggedIn = false;
       }
     } catch (e) {
       print('UserProvider.initializeUser: 初始化用户状态失败: $e');
+      _isLoggedIn = false;
     } finally {
       _isLoading = false;
       notifyListeners();

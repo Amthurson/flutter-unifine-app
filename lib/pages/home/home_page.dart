@@ -29,10 +29,10 @@ class _HomePageState extends State<HomePage> {
             title: '主页',
             showBack: false,
             backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
+            itemColor: Colors.black,
+            titleColor: Colors.black,
           ),
-          const Divider(height: 1),
-          Expanded(
+          const Expanded(
             child: CompatibleWebView(
               url: '你的主页url',
               title: '主页',
@@ -69,8 +69,7 @@ class HomePageWebView extends StatelessWidget {
               title: Text(title),
               automaticallyImplyLeading: !isHome,
               actions: [
-                if (isFunc)
-                  Icon(Icons.extension), // 功能页可自定义icon
+                if (isFunc) const Icon(Icons.extension), // 功能页可自定义icon
               ],
             ),
       body: WebViewWidget(

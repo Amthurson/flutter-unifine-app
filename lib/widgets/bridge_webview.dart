@@ -143,14 +143,17 @@ class BridgeWebViewWidget extends StatefulWidget {
   final void Function(String url)? onPageStarted;
   final void Function(String url)? onPageFinished;
   final void Function(String url)? onNavigationRequest;
+  final GlobalKey<NavigationBarWidgetState>? navKey;
 
-  const BridgeWebViewWidget(
-      {required this.initialUrl,
-      this.onWebViewCreated,
-      super.key,
-      this.onPageStarted,
-      this.onPageFinished,
-      this.onNavigationRequest});
+  const BridgeWebViewWidget({
+    required this.initialUrl,
+    this.onWebViewCreated,
+    super.key,
+    this.onPageStarted,
+    this.onPageFinished,
+    this.onNavigationRequest,
+    this.navKey,
+  });
 
   @override
   State<BridgeWebViewWidget> createState() => _BridgeWebViewWidgetState();
@@ -161,12 +164,14 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
   BridgeWebView? _bridgeWebView;
   bool _isInitialized = false;
   String? _bridgeScript;
-  final GlobalKey<NavigationBarWidgetState> navKey = GlobalKey<NavigationBarWidgetState>();
+  late final GlobalKey<NavigationBarWidgetState> navKey;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController();
+
+    navKey = widget.navKey ?? GlobalKey<NavigationBarWidgetState>();
 
     // 初始化JSSDK handlers
     JSSDKHandlers.initHandlers(context, navKey);
@@ -195,7 +200,8 @@ class _BridgeWebViewWidgetState extends State<BridgeWebViewWidget> {
           if (_bridgeScript != null) {
             await _controller.runJavaScript(_bridgeScript!);
           } else {
-            final js = await rootBundle.loadString('assets/js/flutter_bridge_unified.js');
+            final js = await rootBundle
+                .loadString('assets/js/flutter_bridge_unified.js');
             await _controller.runJavaScript(js);
           }
 

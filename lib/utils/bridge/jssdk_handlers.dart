@@ -301,19 +301,68 @@ class _SetNavigationHandler implements BridgeHandler {
 
   @override
   void call(dynamic data, Function(String) callback) {
-    // 解析data，动态设置导航栏
-    final navData = data is String ? jsonDecode(data) : data;
-    navKey.currentState?.updateNavigation(
-      title: navData['title'],
-      showBack: navData['showBack'],
-      backgroundColor: navData['backgroundColor'] != null
-          ? Color(int.parse(navData['backgroundColor']))
-          : null,
-      foregroundColor: navData['foregroundColor'] != null
-          ? Color(int.parse(navData['foregroundColor']))
-          : null,
-    );
-    callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
+    try {
+      // 解析data，动态设置导航栏
+      final navData = data is String ? jsonDecode(data) : data;
+      
+      // 提取导航条样式参数
+      final title = navData['title'] as String? ?? '';
+      final titleColor = navData['titleColor'] as String? ?? '#000000';
+      final backgroundImage = navData['backgroundImage'] as String?;
+      final itemColor = navData['itemColor'] as String? ?? '#000000';
+      final showBack = navData['showBack'] as bool? ?? true;
+      final backgroundColor = navData['backgroundColor'] as String? ?? '#ffffff';
+      
+      // 更新导航栏
+      navKey.currentState?.updateNavigation(
+        title: title,
+        showBack: showBack,
+        backgroundColor: _parseColor(backgroundColor),
+        itemColor: _parseColor(itemColor),
+        backgroundImage: backgroundImage,
+        titleColor: _parseColor(titleColor),
+      );
+      
+      callback(jsonEncode({
+        "status": "success", 
+        "msg": "导航栏设置成功", 
+        "data": {
+          'title': title,
+          'titleColor': titleColor,
+          'backgroundImage': backgroundImage,
+          'itemColor': itemColor,
+          'showBack': showBack
+        }
+      }));
+    } catch (e) {
+      callback(jsonEncode({
+        "status": "fail", 
+        "msg": "设置导航栏失败: $e", 
+        "data": {}
+      }));
+    }
+  }
+  
+  /// 解析颜色字符串为Color对象
+  Color _parseColor(String colorStr) {
+    if (colorStr.startsWith('#')) {
+      // 处理十六进制颜色
+      final hex = colorStr.replaceFirst('#', '');
+      if (hex.length == 6) {
+        final r = int.parse(hex.substring(0, 2), radix: 16);
+        final g = int.parse(hex.substring(2, 4), radix: 16);
+        final b = int.parse(hex.substring(4, 6), radix: 16);
+        return Color.fromARGB(255, r, g, b);
+      } else if (hex.length == 8) {
+        final a = int.parse(hex.substring(0, 2), radix: 16);
+        final r = int.parse(hex.substring(2, 4), radix: 16);
+        final g = int.parse(hex.substring(4, 6), radix: 16);
+        final b = int.parse(hex.substring(6, 8), radix: 16);
+        return Color.fromARGB(a, r, g, b);
+      }
+    }
+    // 默认返回白色
+    return Colors.white;
   }
 }
 

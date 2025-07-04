@@ -10,6 +10,8 @@ class NavigationUtils {
   /// 对应Android项目中的MainJumpUtils.jumpMainBridgeActivity方法
   static void jumpMainBridgeActivity(BuildContext context) {
     final userProvider = context.read<UserProvider>();
+    print(
+        'NavigationUtils.jumpMainBridgeActivity: 用户信息: ${userProvider.homeUrlInfo}');
     // 检查是否有主页URL信息
     if (userProvider.hasHomeUrlInfo) {
       // 有主页URL信息，跳转到广告页

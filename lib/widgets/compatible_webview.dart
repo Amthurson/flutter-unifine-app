@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/webview_register/webview_register.dart';
 import './bridge_webview.dart';
+import './navigation_bar_widget.dart';
 
 class CompatibleWebView extends StatelessWidget {
   final String url;
@@ -10,6 +11,7 @@ class CompatibleWebView extends StatelessWidget {
   final Function(String)? onPageStarted;
   final Function(String)? onPageFinished;
   final Function(String)? onNavigationRequest;
+  final GlobalKey<NavigationBarWidgetState>? navKey;
 
   const CompatibleWebView({
     super.key,
@@ -18,6 +20,7 @@ class CompatibleWebView extends StatelessWidget {
     this.onPageStarted,
     this.onPageFinished,
     this.onNavigationRequest,
+    this.navKey,
   });
 
   @override
@@ -40,6 +43,7 @@ class CompatibleWebView extends StatelessWidget {
             onPageStarted: onPageStarted,
             onPageFinished: onPageFinished,
             onNavigationRequest: onNavigationRequest,
+            navKey: navKey,
           ),
         ],
       );

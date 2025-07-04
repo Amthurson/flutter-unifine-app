@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_front_end/api/cloud_api.dart';
 import '../models/home_url_info.dart';
 
 class UserService {
@@ -9,15 +10,27 @@ class UserService {
   /// 保存用户信息
   static Future<void> saveUserInfo(Map<String, dynamic> userInfo) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userInfoKey, jsonEncode(userInfo));
+    final jsonStr = jsonEncode(userInfo);
+    await prefs.setString(_userInfoKey, jsonStr);
+    print('UserService.saveUserInfo: 保存用户信息成功，token: ${userInfo['token']}');
   }
 
   /// 获取用户信息
   static Future<Map<String, dynamic>?> getUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_userInfoKey);
-    if (jsonStr == null) return null;
-    return jsonDecode(jsonStr);
+    if (jsonStr == null) {
+      print('UserService.getUserInfo: 本地没有用户信息');
+      return null;
+    }
+    try {
+      final userInfo = jsonDecode(jsonStr);
+      print('UserService.getUserInfo: 获取到用户信息，token: ${userInfo['token']}');
+      return userInfo;
+    } catch (e) {
+      print('UserService.getUserInfo: 解析用户信息失败: $e');
+      return null;
+    }
   }
 
   /// 获取token
@@ -41,6 +54,10 @@ class UserService {
   static Future<void> clearUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userInfoKey);
+    await prefs.remove('token'); // 确保单独的token字段也被清理
+    await prefs.remove('user'); // 如果有user字段也清理
+    await prefs.remove('refreshToken'); // 如果有refreshToken字段也清理
+    print('UserService.clearUserInfo: 已清理所有用户相关缓存');
   }
 
   /// 保存主页URL信息
@@ -61,6 +78,14 @@ class UserService {
   static Future<void> clearHomeUrlInfo() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_homeUrlInfoKey);
+  }
+
+  /// 请求接口并更新当前服务窗配置信息 getWindowsConfig
+  static Future<void> updateCurrentWindowsConfig() async {
+    final userInfo = await getUserInfo();
+    final windowsId = userInfo?['windowsId'];
+    final windowsConfig = await CloudApi.getWindowsConfig(windowsId);
+    await saveHomeUrlInfo(HomeUrlInfo.fromJson(windowsConfig));
   }
 
   // ==================== 新增方法 ====================

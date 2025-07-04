@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_front_end/config/env_config.dart';
 
 class CommonConfig {
   // 首页平台选择
-  static const String workbenchSelectUrl =
-      "http://你的后端地址/cloudApp/selectSys/index";
-  static const String homeMenuWorkbenchSelectUrl =
-      "http://你的后端地址/cloudApp/selectSys/mineServer";
-  static const String registerUrl = "http://你的后端地址/cloudApp/register/index";
-  static const String privacyUrl = "http://你的后端地址/cloudApp/privacy/index";
+  static final String workbenchSelectUrl =
+      "${EnvConfig.baseUrl}cloudApp/selectSys/index";
+  static final String homeMenuWorkbenchSelectUrl =
+      "${EnvConfig.baseUrl}cloudApp/selectSys/mineServer";
+  static final String registerUrl =
+      "${EnvConfig.baseUrl}cloudApp/register/index";
+  static final String privacyUrl = "${EnvConfig.baseUrl}cloudApp/privacy/index";
 
   static const String homeUrlInfoKey = "home_url_info";
 

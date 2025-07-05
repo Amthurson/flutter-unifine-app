@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../providers/font_size_provider.dart';
 
 class NavigationBarWidget extends StatefulWidget {
   final String title;
@@ -139,9 +140,24 @@ class NavigationBarWidgetState extends State<NavigationBarWidget> {
         (url.startsWith('http://') || url.startsWith('https://'));
   }
 
+  void resetNavigation() {
+    setState(() {
+      _title = widget.title;
+      _showBack = widget.showBack;
+      _backgroundColor = widget.backgroundColor;
+      _titleColor = widget.titleColor;
+      _itemColor = widget.itemColor;
+      _backgroundImage = widget.backgroundImage;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    const double iconSize = 24;
+    final fontScale = Provider.of<FontSizeProvider>(context).fontScale;
+    double iconScale = (0.95 + 0.05 * fontScale).clamp(0.9, 1.1);
+    final double iconSize = 22.0 * iconScale;
+    final double backIconSize = 16.0 * iconScale;
+    final double iconPadding = 0.5 * iconScale;
     const double appBarHeight = kToolbarHeight;
     final Color iconColor = _itemColor ?? Colors.black87;
     final Color titleColor = _titleColor ?? Colors.black87;
@@ -170,30 +186,61 @@ class NavigationBarWidgetState extends State<NavigationBarWidget> {
               height: appBarHeight,
               child: Row(
                 children: [
-                  if (_shouldShowBack)
-                    IconButton(
-                      icon: Image.asset(
-                          'assets/images/drawable-xxxhdpi/icon_title_back.png',
-                          width: iconSize,
-                          height: iconSize,
-                          color: iconColor),
-                      onPressed: _onBackPressed,
-                      splashRadius: 20,
-                    ),
-                  IconButton(
-                    icon: Image.asset(
-                        'assets/images/drawable-xxxhdpi/icon_home_setting.png',
-                        width: iconSize,
-                        height: iconSize,
-                        color: iconColor),
-                    onPressed: _onMorePressed,
-                    splashRadius: 20,
-                  ),
-                  IconButton(
-                    icon: Image.asset('assets/images/drawable-xhdpi/home.png',
-                        width: iconSize, height: iconSize, color: iconColor),
-                    onPressed: _onHomePressed,
-                    splashRadius: 20,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    spacing: 0,
+                    children: [
+                      if (_shouldShowBack)
+                        Padding(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: iconPadding),
+                          child: IconButton(
+                            icon: Image.asset(
+                                'assets/images/drawable-xxxhdpi/icon_title_back.png',
+                                width: backIconSize,
+                                height: backIconSize,
+                                color: iconColor),
+                            onPressed: _onBackPressed,
+                            splashRadius: backIconSize,
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(
+                                minWidth: backIconSize + iconPadding,
+                                minHeight: backIconSize + iconPadding),
+                          ),
+                        ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: iconPadding),
+                        child: IconButton(
+                          icon: Image.asset(
+                              'assets/images/drawable-xxxhdpi/icon_home_setting.png',
+                              width: iconSize,
+                              height: iconSize,
+                              color: iconColor),
+                          onPressed: _onMorePressed,
+                          splashRadius: iconSize,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(
+                              minWidth: iconSize + iconPadding,
+                              minHeight: iconSize + iconPadding),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: iconPadding),
+                        child: IconButton(
+                          icon: Image.asset(
+                              'assets/images/drawable-xhdpi/home.png',
+                              width: iconSize,
+                              height: iconSize,
+                              color: iconColor),
+                          onPressed: _onHomePressed,
+                          splashRadius: iconSize,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(
+                              minWidth: iconSize + iconPadding,
+                              minHeight: iconSize + iconPadding),
+                        ),
+                      ),
+                    ],
                   ),
                   Expanded(
                     child: Center(
@@ -202,29 +249,48 @@ class NavigationBarWidgetState extends State<NavigationBarWidget> {
                         style: TextStyle(
                           color: titleColor,
                           fontWeight: FontWeight.w500,
-                          fontSize: 18,
+                          fontSize: 18 * fontScale,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: Image.asset(
-                        'assets/images/drawable-xxxhdpi/icon_scan_white.png',
-                        width: iconSize,
-                        height: iconSize,
-                        color: iconColor),
-                    onPressed: _onScanPressed,
-                    splashRadius: 20,
-                  ),
-                  IconButton(
-                    icon: Image.asset(
-                        'assets/images/drawable-xxxhdpi/icon_inform.png',
-                        width: iconSize,
-                        height: iconSize,
-                        color: iconColor),
-                    onPressed: _onMessagePressed,
-                    splashRadius: 20,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: iconPadding),
+                        child: IconButton(
+                          icon: Image.asset(
+                              'assets/images/drawable-xxxhdpi/icon_scan_white.png',
+                              width: iconSize,
+                              height: iconSize,
+                              color: iconColor),
+                          onPressed: _onScanPressed,
+                          splashRadius: iconSize,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(
+                              minWidth: iconSize + iconPadding,
+                              minHeight: iconSize + iconPadding),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: iconPadding),
+                        child: IconButton(
+                          icon: Image.asset(
+                              'assets/images/drawable-xxxhdpi/icon_inform.png',
+                              width: iconSize,
+                              height: iconSize,
+                              color: iconColor),
+                          onPressed: _onMessagePressed,
+                          splashRadius: iconSize,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(
+                              minWidth: iconSize + iconPadding,
+                              minHeight: iconSize + iconPadding),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

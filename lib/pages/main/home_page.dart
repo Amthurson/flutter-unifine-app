@@ -25,6 +25,11 @@ class _HomePageState extends State<HomePage> {
             foregroundColor: Colors.white,
             actions: [
               IconButton(
+                icon: const Icon(Icons.settings),
+                color: Colors.white,
+                onPressed: () => context.push('/settings'),
+              ),
+              IconButton(
                 icon: const Icon(Icons.message),
                 color: Colors.white,
                 onPressed: () => context.push('/im-messages'),

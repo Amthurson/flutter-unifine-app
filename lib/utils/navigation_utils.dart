@@ -13,12 +13,32 @@ class NavigationUtils {
   /// 对应Android项目中的MainJumpUtils.jumpMainBridgeActivity方法
   static Future<void> jumpMainBridgeActivity(BuildContext context) async {
     final userProvider = context.read<UserProvider>();
+    print('NavigationUtils.jumpMainBridgeActivity: 开始检查用户信息');
+
+    // 确保数据已经加载完成
+    if (userProvider.isLoading) {
+      print('NavigationUtils.jumpMainBridgeActivity: 用户数据正在加载中，等待完成...');
+      // 等待数据加载完成
+      while (userProvider.isLoading) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    }
+
+    // 重新加载主页URL信息，确保数据是最新的
+    print('NavigationUtils.jumpMainBridgeActivity: 重新加载主页URL信息');
+    await userProvider.reloadHomeUrlInfo();
+
     print(
         'NavigationUtils.jumpMainBridgeActivity: 用户信息: ${userProvider.homeUrlInfo}');
+    print(
+        'NavigationUtils.jumpMainBridgeActivity: hasHomeUrlInfo: ${userProvider.hasHomeUrlInfo}');
+
     // 检查是否有主页URL信息
     if (userProvider.hasHomeUrlInfo) {
       // 有主页URL信息，跳转到广告页
       final homeUrlInfo = userProvider.homeUrlInfo!;
+      print(
+          'NavigationUtils.jumpMainBridgeActivity: 有主页URL信息，跳转到广告页: ${homeUrlInfo.toJson()}');
       final windowsConfig =
           await CloudApi.getWindowsConfig(homeUrlInfo.windowsId);
       // merge 一下当前的homeUrlInfo和windowsConfig
@@ -33,6 +53,7 @@ class NavigationUtils {
       context.go('/launch-advert', extra: newHomeUrlInfo);
     } else {
       // 没有主页URL信息，跳转到平台选择页
+      print('NavigationUtils.jumpMainBridgeActivity: 没有主页URL信息，跳转到平台选择页');
       context.go('/platform-select');
       // context.go('/token-test');
     }

@@ -62,15 +62,27 @@ class UserService {
   /// 保存主页URL信息
   static Future<void> saveHomeUrlInfo(HomeUrlInfo homeUrlInfo) async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString(_homeUrlInfoKey, jsonEncode(homeUrlInfo.toJson()));
+    await prefs.setString(_homeUrlInfoKey, jsonEncode(homeUrlInfo.toJson()));
+    print('UserService.saveHomeUrlInfo: 保存主页URL信息成功: ${homeUrlInfo.toJson()}');
   }
 
   /// 获取主页URL信息
   static Future<HomeUrlInfo?> getHomeUrlInfo() async {
     final prefs = await SharedPreferences.getInstance();
     final str = prefs.getString(_homeUrlInfoKey);
-    if (str == null) return null;
-    return HomeUrlInfo.fromJson(jsonDecode(str));
+    print('UserService.getHomeUrlInfo: 从SharedPreferences获取的原始数据: $str');
+    if (str == null) {
+      print('UserService.getHomeUrlInfo: 没有找到保存的主页URL信息');
+      return null;
+    }
+    try {
+      final homeUrlInfo = HomeUrlInfo.fromJson(jsonDecode(str));
+      print('UserService.getHomeUrlInfo: 成功解析主页URL信息: ${homeUrlInfo.toJson()}');
+      return homeUrlInfo;
+    } catch (e) {
+      print('UserService.getHomeUrlInfo: 解析主页URL信息失败: $e');
+      return null;
+    }
   }
 
   /// 清除主页URL信息

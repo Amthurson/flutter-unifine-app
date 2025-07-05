@@ -16,7 +16,6 @@ import '../pages/profile/face_collection_page.dart';
 import '../pages/profile/app_share_page.dart';
 import '../pages/profile/about_app_page.dart';
 import '../pages/message/im_message_list_page.dart';
-import '../pages/test_back_button.dart';
 import '../pages/profile/settings_page.dart';
 import '../pages/profile/my_qrcode_page.dart';
 import '../pages/profile/account_security_page.dart';
@@ -26,7 +25,8 @@ import '../pages/profile/delete_account_page.dart';
 import '../pages/launch_advert_page.dart';
 import '../pages/platform_select_page.dart';
 import '../pages/web_home_page.dart';
-import '../pages/token_test_page.dart';
+import '../pages/settings/font_size_page.dart';
+import '../pages/scan_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -37,20 +37,6 @@ class AppRouter {
         path: '/',
         name: 'splash',
         builder: (context, state) => const SplashPage(),
-      ),
-
-      // 测试返回按钮页面
-      GoRoute(
-        path: '/test-back',
-        name: 'test-back',
-        builder: (context, state) => const TestBackButtonPage(),
-      ),
-
-      // Token测试页面
-      GoRoute(
-        path: '/token-test',
-        name: 'token-test',
-        builder: (context, state) => const TokenTestPage(),
       ),
 
       // 验证码登录页
@@ -101,7 +87,11 @@ class AppRouter {
       GoRoute(
         path: '/platform-select',
         name: 'platform-select',
-        builder: (context, state) => const PlatformSelectPage(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final selectType = extra?['selectType'] ?? 'all-platform';
+          return PlatformSelectPage(selectType: selectType);
+        },
       ),
 
       // Web主页面
@@ -231,6 +221,20 @@ class AppRouter {
         path: '/delete-account',
         name: 'delete-account',
         builder: (context, state) => const DeleteAccountPage(),
+      ),
+
+      // 字体设置页
+      GoRoute(
+        path: '/font-size-settings',
+        name: 'font-size-settings',
+        builder: (context, state) => const FontSizePage(),
+      ),
+
+      // 二维码扫描页
+      GoRoute(
+        path: '/scan',
+        name: 'scan',
+        builder: (context, state) => const ScanPage(),
       ),
     ],
   );

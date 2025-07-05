@@ -20,6 +20,9 @@ import 'package:unified_front_end/services/app_launcher_service.dart';
 import 'package:unified_front_end/services/bluetooth_service.dart';
 import 'package:unified_front_end/widgets/navigation_bar_widget.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:unified_front_end/providers/user_provider.dart';
+import 'package:unified_front_end/models/home_url_info.dart';
 
 /// JSSDK处理器管理器
 class JSSDKHandlers {
@@ -27,7 +30,8 @@ class JSSDKHandlers {
   static BuildContext? globalContext;
 
   /// 初始化所有处理器
-  static void initHandlers(BuildContext context, GlobalKey<NavigationBarWidgetState> navKey) {
+  static void initHandlers(
+      BuildContext context, GlobalKey<NavigationBarWidgetState> navKey) {
     globalContext = context;
     // 基础功能
     handlers['setPortrait'] = _SetPortraitHandler();
@@ -208,31 +212,36 @@ class _SaveHomeUrlHandler implements BridgeHandler {
       if (indexUrl == null || indexUrl.isEmpty) {
         // 这里可以用 FlutterToast 或其它方式弹提示
         // Fluttertoast.showToast(msg: "暂无数据");
-        callback(jsonEncode({
-          "status": "fail",
-          "msg": "indexUrl为空",
-          "data": {}
-        }));
+        callback(
+            jsonEncode({"status": "fail", "msg": "indexUrl为空", "data": {}}));
         return;
       }
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('homeUrl', jsonEncode(entity));
+      await prefs.setString('homeUrlInfo', jsonEncode(entity));
+
+      // 更新UserProvider中的homeUrlInfo
+      if (JSSDKHandlers.globalContext != null) {
+        try {
+          final userProvider = Provider.of<UserProvider>(
+              JSSDKHandlers.globalContext!,
+              listen: false);
+          userProvider.cacheCurrentHomeUrlInfo();
+          final homeUrlInfo = HomeUrlInfo.fromJson(entity);
+          await userProvider.saveHomeUrlInfo(homeUrlInfo);
+          print(
+              '_SaveHomeUrlHandler: 已更新UserProvider中的homeUrlInfo: ${homeUrlInfo.toJson()}');
+        } catch (e) {
+          print('_SaveHomeUrlHandler: 更新UserProvider失败: $e');
+        }
+      }
 
       // 这里可以实现 selectWindow 逻辑（如有需要）
       // presenter.selectWindow(windowsId ?? "");
 
-      callback(jsonEncode({
-        "status": "success",
-        "msg": "成功",
-        "data": {}
-      }));
+      callback(jsonEncode({"status": "success", "msg": "成功", "data": {}}));
     } catch (e) {
-      callback(jsonEncode({
-        "status": "fail",
-        "msg": "保存失败: $e",
-        "data": {}
-      }));
+      callback(jsonEncode({"status": "fail", "msg": "保存失败: $e", "data": {}}));
     }
   }
 }
@@ -249,16 +258,12 @@ class _OpenLinkHandler implements BridgeHandler {
       final hidden = entity['hidden'] as int? ?? 0;
 
       if (url == null || url.isEmpty) {
-        callback(jsonEncode({
-          "status": "fail",
-          "msg": "暂无数据",
-          "data": {}
-        }));
+        callback(jsonEncode({"status": "fail", "msg": "暂无数据", "data": {}}));
         return;
       }
 
       // 使用 go_router 跳转
-      GoRouter.of(JSSDKHandlers.globalContext!).go('/web-home', extra: {
+      GoRouter.of(JSSDKHandlers.globalContext!).push('/web-home', extra: {
         'title': title,
         'url': url,
         'isHome': isHome,
@@ -266,17 +271,9 @@ class _OpenLinkHandler implements BridgeHandler {
         'isFunc': isFunc == 1,
       });
 
-      callback(jsonEncode({
-        "status": "success",
-        "msg": "",
-        "data": {}
-      }));
+      callback(jsonEncode({"status": "success", "msg": "", "data": {}}));
     } catch (e) {
-      callback(jsonEncode({
-        "status": "fail",
-        "msg": "打开链接失败: $e",
-        "data": {}
-      }));
+      callback(jsonEncode({"status": "fail", "msg": "打开链接失败: $e", "data": {}}));
     }
   }
 }
@@ -304,15 +301,16 @@ class _SetNavigationHandler implements BridgeHandler {
     try {
       // 解析data，动态设置导航栏
       final navData = data is String ? jsonDecode(data) : data;
-      
+
       // 提取导航条样式参数
       final title = navData['title'] as String? ?? '';
       final titleColor = navData['titleColor'] as String? ?? '#000000';
       final backgroundImage = navData['backgroundImage'] as String?;
       final itemColor = navData['itemColor'] as String? ?? '#000000';
       final showBack = navData['showBack'] as bool? ?? true;
-      final backgroundColor = navData['backgroundColor'] as String? ?? '#ffffff';
-      
+      final backgroundColor =
+          navData['backgroundColor'] as String? ?? '#ffffff';
+
       // 更新导航栏
       navKey.currentState?.updateNavigation(
         title: title,
@@ -322,10 +320,10 @@ class _SetNavigationHandler implements BridgeHandler {
         backgroundImage: backgroundImage,
         titleColor: _parseColor(titleColor),
       );
-      
+
       callback(jsonEncode({
-        "status": "success", 
-        "msg": "导航栏设置成功", 
+        "status": "success",
+        "msg": "导航栏设置成功",
         "data": {
           'title': title,
           'titleColor': titleColor,
@@ -335,14 +333,11 @@ class _SetNavigationHandler implements BridgeHandler {
         }
       }));
     } catch (e) {
-      callback(jsonEncode({
-        "status": "fail", 
-        "msg": "设置导航栏失败: $e", 
-        "data": {}
-      }));
+      callback(
+          jsonEncode({"status": "fail", "msg": "设置导航栏失败: $e", "data": {}}));
     }
   }
-  
+
   /// 解析颜色字符串为Color对象
   Color _parseColor(String colorStr) {
     if (colorStr.startsWith('#')) {
@@ -704,28 +699,23 @@ class _GetSessionStorageHandler implements BridgeHandler {
 
       print("userInfoRaw: $userInfoRaw");
 
-      final homeUrlJson = prefs.getString('homeUrl');
+      final homeUrlJson = prefs.getString('homeUrlInfo');
 
       final sessionData = {
         'tokenId': userInfoRaw != null ? userInfoRaw['token'] : '',
         'userId': userInfoRaw != null ? userInfoRaw['userId'] : '',
         'userName': userInfoRaw != null ? userInfoRaw['userName'] : '',
         'mobile': userInfoRaw != null ? userInfoRaw['phone'] : '',
-        'eid': homeUrlJson != null ? jsonDecode(homeUrlJson)['windowsId'] : null,
+        'eid':
+            homeUrlJson != null ? jsonDecode(homeUrlJson)['windowsId'] : null,
         'baseUrl': EnvConfig.baseUrl,
       };
 
-      callback(jsonEncode({
-        "status": "success",
-        "msg": "",
-        "data": sessionData
-      }));
+      callback(
+          jsonEncode({"status": "success", "msg": "", "data": sessionData}));
     } catch (e) {
-      callback(jsonEncode({
-        "status": "fail",
-        "msg": "获取会话存储失败: $e",
-        "data": {}
-      }));
+      callback(
+          jsonEncode({"status": "fail", "msg": "获取会话存储失败: $e", "data": {}}));
     }
   }
 }

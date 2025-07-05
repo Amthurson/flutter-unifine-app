@@ -1,13 +1,13 @@
 import 'package:dio/dio.dart';
 import '../config/env_config.dart';
+import '../utils/dio_client.dart';
 
 class CloudApi {
-  static final Dio _dio = Dio(BaseOptions(baseUrl: EnvConfig.baseUrl));
-
   /// 获取用户首页信息
   static Future<Map<String, dynamic>> getHomeUrlInfo() async {
     try {
-      final resp = await _dio.get('yjy/cloud/a/master/service');
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get('yjy/cloud/a/master/service');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -22,8 +22,9 @@ class CloudApi {
   static Future<List<dynamic>> searchCompanyUser(
       Map<String, dynamic> searchCompanyUserParam) async {
     try {
-      final resp = await _dio.post('yjy/cloud/a/user/list',
-          data: searchCompanyUserParam);
+      final dio = await DioClient.getInstance();
+      final resp =
+          await dio.post('yjy/cloud/a/user/list', data: searchCompanyUserParam);
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -38,7 +39,8 @@ class CloudApi {
   static Future<Map<String, dynamic>> getCompanyDetail(
       Map<String, dynamic> companyDetailParam) async {
     try {
-      final resp = await _dio.post('yjy/cloud/a/direct/org/and/user/list',
+      final dio = await DioClient.getInstance();
+      final resp = await dio.post('yjy/cloud/a/direct/org/and/user/list',
           data: companyDetailParam);
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -53,7 +55,8 @@ class CloudApi {
   /// 通讯录公司数据
   static Future<List<dynamic>> getCompanyList() async {
     try {
-      final resp = await _dio.get('yjy/cloud/a/user/server/list');
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get('yjy/cloud/a/user/server/list');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -67,8 +70,9 @@ class CloudApi {
   /// 扫码登录
   static Future<void> scanLogin(String token) async {
     try {
+      final dio = await DioClient.getInstance();
       final resp =
-          await _dio.get('yjy/cloud/login/qrcode/authorization?token=$token');
+          await dio.get('yjy/cloud/login/qrcode/authorization?token=$token');
       if (resp.data['code'] != 3001) {
         throw Exception(resp.data['msg'] ?? '扫码登录失败');
       }
@@ -81,7 +85,8 @@ class CloudApi {
   static Future<Map<String, dynamic>> getOrganTree(
       String busBusinessId, String organUuid) async {
     try {
-      final resp = await _dio.get(
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get(
           'porgan/a/enterprise/book/query_organ_tree?busBusinessId=$busBusinessId&organUuid=$organUuid');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -97,7 +102,8 @@ class CloudApi {
   static Future<Map<String, dynamic>> getEnterpriseInfo(
       String busBusinessUuid) async {
     try {
-      final resp = await _dio.get(
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get(
           'porgan/a/enterprise/enterpriseQrcode/queryEnterpriseInfo?busBusinessUuid=$busBusinessUuid');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -112,7 +118,8 @@ class CloudApi {
   /// 加入企业
   static Future<void> joinEnterprise(String busBusinessUuid) async {
     try {
-      final resp = await _dio.get(
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get(
           'porgan/a/enterprise/enterpriseQrcode/bindUserSubmit?busBusinessUuid=$busBusinessUuid');
       if (resp.data['code'] != 3001) {
         throw Exception(resp.data['msg'] ?? '加入企业失败');
@@ -125,7 +132,8 @@ class CloudApi {
   /// 获取组织架构树
   static Future<List<dynamic>> getOrganTreeList(String busBusinessUuid) async {
     try {
-      final resp = await _dio.get(
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get(
           'porgan/a/enterprise/book/queryOrganTree?busBusinessUuid=$busBusinessUuid');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -141,8 +149,9 @@ class CloudApi {
   static Future<List<dynamic>> getAddressUser(
       Map<String, dynamic> param) async {
     try {
+      final dio = await DioClient.getInstance();
       final resp =
-          await _dio.post('porgan/a/enterprise/book/queryUser', data: param);
+          await dio.post('porgan/a/enterprise/book/queryUser', data: param);
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -156,7 +165,8 @@ class CloudApi {
   /// 查询所有用户
   static Future<List<dynamic>> getAllUser(String busBusinessUuid) async {
     try {
-      final resp = await _dio.get(
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get(
           'porgan/a/enterprise/book/queryAllUser?busBusinessUuid=$busBusinessUuid');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -172,7 +182,8 @@ class CloudApi {
   static Future<Map<String, dynamic>> requestBusinessUuid(
       String url, String deviceImei) async {
     try {
-      final resp = await _dio.get('$url?deviceImei=$deviceImei');
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get('$url?deviceImei=$deviceImei');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -186,7 +197,8 @@ class CloudApi {
   /// 访客登录
   static Future<Map<String, dynamic>> visitorLogin() async {
     try {
-      final resp = await _dio.get('porgan/a/user/login/visitorLoginSubmit');
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get('porgan/a/user/login/visitorLoginSubmit');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -200,7 +212,8 @@ class CloudApi {
   /// 获取园区信息
   static Future<Map<String, dynamic>> getParkInfo(String bpParkUuid) async {
     try {
-      final resp = await _dio
+      final dio = await DioClient.getInstance();
+      final resp = await dio
           .get('porgan/a/park/queryAppParkInfo?bpParkUuid=$bpParkUuid');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -215,8 +228,9 @@ class CloudApi {
   /// 获取服务窗详情
   static Future<Map<String, dynamic>> getWindowInfo(String windowsId) async {
     try {
+      final dio = await DioClient.getInstance();
       final resp =
-          await _dio.get('yjy/cloud/a/windows/info?windowsId=$windowsId');
+          await dio.get('yjy/cloud/a/windows/info?windowsId=$windowsId');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -230,8 +244,9 @@ class CloudApi {
   /// 服务窗切换上报
   static Future<void> selectWindow(String windowsId) async {
     try {
+      final dio = await DioClient.getInstance();
       final resp =
-          await _dio.get('yjy/cloud/a/windows/select?windowsId=$windowsId');
+          await dio.get('yjy/cloud/a/windows/select?windowsId=$windowsId');
       if (resp.data['code'] != 3001) {
         throw Exception(resp.data['msg'] ?? '服务窗切换失败');
       }
@@ -243,7 +258,8 @@ class CloudApi {
   /// 获取全局配置
   static Future<Map<String, dynamic>> getGlobalConfig() async {
     try {
-      final resp = await _dio.get('yjy/cloud/p/service/config/global');
+      final dio = await DioClient.getInstance();
+      final resp = await dio.get('yjy/cloud/p/service/config/global');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -258,10 +274,11 @@ class CloudApi {
   static Future<Map<String, dynamic>> getWindowsConfig(
       String? windowsId) async {
     try {
+      final dio = await DioClient.getInstance();
       final url = windowsId != null
           ? 'yjy/cloud/p/service/config/windows?windowsId=$windowsId'
           : 'yjy/cloud/p/service/config/windows';
-      final resp = await _dio.get(url);
+      final resp = await dio.get(url);
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
       } else {
@@ -275,7 +292,8 @@ class CloudApi {
   /// 通过用户获取atrust用户信息
   static Future<Map<String, dynamic>> getLxrApi(String mobile) async {
     try {
-      final resp = await _dio
+      final dio = await DioClient.getInstance();
+      final resp = await dio
           .post('yjy/external/portal/service/unified-lxr-api?mobile=$mobile');
       if (resp.data['code'] == 3001) {
         return resp.data['data'];
@@ -290,7 +308,8 @@ class CloudApi {
   /// 用户数据采集
   static Future<void> setUserAction(Map<String, dynamic> param) async {
     try {
-      final resp = await _dio.post('yjy/cloud/p/sys/user/action', data: param);
+      final dio = await DioClient.getInstance();
+      final resp = await dio.post('yjy/cloud/p/sys/user/action', data: param);
       if (resp.data['code'] != 3001) {
         throw Exception(resp.data['msg'] ?? '用户数据采集失败');
       }
@@ -302,7 +321,8 @@ class CloudApi {
   /// 直接请求，用于服务端获取数据，不关心结果
   static Future<void> directRequest(String url) async {
     try {
-      await _dio.get(url);
+      final dio = await DioClient.getInstance();
+      await dio.get(url);
     } catch (e) {
       throw Exception('直接请求失败: $e');
     }

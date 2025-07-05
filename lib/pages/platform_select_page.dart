@@ -6,7 +6,8 @@ import '../providers/user_provider.dart';
 import '../widgets/compatible_webview.dart';
 
 class PlatformSelectPage extends StatefulWidget {
-  const PlatformSelectPage({super.key});
+  const PlatformSelectPage({super.key, this.selectType = 'all-platform'});
+  final String selectType;
 
   @override
   State<PlatformSelectPage> createState() => _PlatformSelectPageState();
@@ -14,6 +15,9 @@ class PlatformSelectPage extends StatefulWidget {
 
 class _PlatformSelectPageState extends State<PlatformSelectPage> {
   final String _currentTitle = '选择平台';
+
+  String get allPlatformUrl => CommonConfig.workbenchSelectUrl;
+  String get mineServerUrl => CommonConfig.homeMenuWorkbenchSelectUrl;
 
   @override
   void initState() {
@@ -70,7 +74,8 @@ class _PlatformSelectPageState extends State<PlatformSelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cloudAppUrl = CommonConfig.workbenchSelectUrl;
+    final cloudAppUrl =
+        widget.selectType == 'all-platform' ? allPlatformUrl : mineServerUrl;
 
     return Scaffold(
       appBar: AppBar(
@@ -103,16 +108,7 @@ class _PlatformSelectPageState extends State<PlatformSelectPage> {
         onPageFinished: (url) {
           // 页面加载完成时的处理
         },
-        onNavigationRequest: (url) {
-          // 导航请求处理
-          // 可以在这里处理平台选择后的跳转逻辑
-          if (url.contains('/select-platform') ||
-              url.contains('/platform-selected')) {
-            // 平台选择完成，跳转到主页或广告页
-            // 这里可以根据实际需求调整跳转逻辑
-            return;
-          }
-        },
+        onNavigationRequest: (url) {},
       ),
     );
   }

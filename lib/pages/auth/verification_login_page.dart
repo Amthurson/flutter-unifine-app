@@ -8,6 +8,7 @@ import '../../api/auth_api.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user.dart';
 import '../../utils/encrypt_util.dart';
+import '../../utils/navigation_utils.dart';
 
 class VerificationLoginPage extends StatefulWidget {
   const VerificationLoginPage({super.key});
@@ -124,31 +125,15 @@ class _VerificationLoginPageState extends State<VerificationLoginPage> {
         Fluttertoast.showToast(msg: '登录成功');
         print('VerificationLoginPage._login: 登录成功，准备跳转');
 
-        // 显示登录成功对话框
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('登录成功'),
-            content: const Text('登录成功，即将跳转到主页'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // 根据用户状态决定跳转
-                  if (user.needBindPhone == true) {
-                    print('VerificationLoginPage._login: 需要绑定手机号，跳转到设置密码页面');
-                    context.go('/set-password'); // 跳转设置密码页面
-                  } else {
-                    print('VerificationLoginPage._login: 直接跳转到主页进行测试');
-                    // 直接跳转到主页进行测试
-                    context.go('/home');
-                  }
-                },
-                child: const Text('确定'),
-              ),
-            ],
-          ),
-        );
+        // 根据用户状态决定跳转
+        if (user.needBindPhone == true) {
+          print('VerificationLoginPage._login: 需要绑定手机号，跳转到设置密码页面');
+          context.go('/set-password'); // 跳转设置密码页面
+        } else {
+          print('VerificationLoginPage._login: 使用NavigationUtils进行跳转');
+          // 使用NavigationUtils进行登录成功后的跳转
+          NavigationUtils.jumpMainBridgeActivity(context);
+        }
       }
     } catch (e) {
       print('VerificationLoginPage._login: 登录失败: $e');

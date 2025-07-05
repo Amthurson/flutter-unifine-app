@@ -13,6 +13,7 @@ class UserProvider extends ChangeNotifier {
   Map<String, dynamic>? _userDetailInfo;
   Map<String, dynamic>? _imAccountInfo;
   HomeUrlInfo? _homeUrlInfo;
+  HomeUrlInfo? _previousHomeUrlInfo;
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
@@ -149,8 +150,6 @@ class UserProvider extends ChangeNotifier {
 
   /// 获取主页URL信息
   Future<void> _fetchHomeUrlInfo() async {
-    if (_currentUser?.token == null) return;
-
     try {
       // 这里应该调用实际的API获取主页URL信息
       // 暂时使用模拟数据
@@ -166,25 +165,31 @@ class UserProvider extends ChangeNotifier {
   /// 加载保存的主页URL信息
   Future<void> _loadHomeUrlInfo() async {
     try {
+      print('UserProvider._loadHomeUrlInfo: 开始加载保存的主页URL信息');
       final savedInfo = await UserService.getHomeUrlInfo();
       if (savedInfo != null) {
         _homeUrlInfo = savedInfo;
-        print('加载保存的主页URL信息成功');
+        print(
+            'UserProvider._loadHomeUrlInfo: 加载保存的主页URL信息成功: ${savedInfo.toJson()}');
+      } else {
+        print('UserProvider._loadHomeUrlInfo: 没有找到保存的主页URL信息');
       }
     } catch (e) {
-      print('加载保存的主页URL信息失败: $e');
+      print('UserProvider._loadHomeUrlInfo: 加载保存的主页URL信息失败: $e');
     }
   }
 
   /// 保存主页URL信息
   Future<void> saveHomeUrlInfo(HomeUrlInfo homeUrlInfo) async {
     try {
+      print(
+          'UserProvider.saveHomeUrlInfo: 开始保存主页URL信息: ${homeUrlInfo.toJson()}');
       await UserService.saveHomeUrlInfo(homeUrlInfo);
       _homeUrlInfo = homeUrlInfo;
       notifyListeners();
-      print('保存主页URL信息成功');
+      print('UserProvider.saveHomeUrlInfo: 保存主页URL信息成功');
     } catch (e) {
-      print('保存主页URL信息失败: $e');
+      print('UserProvider.saveHomeUrlInfo: 保存主页URL信息失败: $e');
       rethrow;
     }
   }
@@ -194,12 +199,18 @@ class UserProvider extends ChangeNotifier {
     return _homeUrlInfo;
   }
 
+  /// 重新加载主页URL信息（供外部调用）
+  Future<void> reloadHomeUrlInfo() async {
+    await _loadHomeUrlInfo();
+  }
+
   /// 检查是否有主页URL信息
   bool get hasHomeUrlInfo {
     final hasInfo = _homeUrlInfo != null &&
         _homeUrlInfo!.indexUrl != null &&
         _homeUrlInfo!.indexUrl!.isNotEmpty;
-    print('UserProvider.hasHomeUrlInfo: $_homeUrlInfo, 结果: $hasInfo');
+    print(
+        'UserProvider.hasHomeUrlInfo: _homeUrlInfo=$_homeUrlInfo, indexUrl=${_homeUrlInfo?.indexUrl}, 结果: $hasInfo');
     return hasInfo;
   }
 
@@ -294,6 +305,17 @@ class UserProvider extends ChangeNotifier {
       _fetchImAccount(),
       _loadHomeUrlInfo(),
     ]);
+  }
+
+  void cacheCurrentHomeUrlInfo() {
+    _previousHomeUrlInfo = _homeUrlInfo;
+  }
+
+  Future<void> restorePreviousHomeUrlInfo() async {
+    if (_previousHomeUrlInfo != null) {
+      await saveHomeUrlInfo(_previousHomeUrlInfo!);
+      _previousHomeUrlInfo = null;
+    }
   }
 }
 

@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 // import '../providers/user_provider.dart';
 import '../widgets/compatible_webview.dart';
 import '../widgets/navigation_bar_widget.dart';
+import '../widgets/app_drawer_menu.dart';
 
 class WebHomePage extends StatefulWidget {
   final String? title;
@@ -36,6 +37,20 @@ class _WebHomePageState extends State<WebHomePage> {
     super.initState();
     _currentTitle = widget.title ?? '统一前端';
     _webViewController = WebViewController();
+
+    // 确保UserProvider中的homeUrlInfo是最新的
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = context.read<UserProvider>();
+      userProvider.reloadHomeUrlInfo();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = context.read<UserProvider>();
+      if (userProvider.homeUrlInfo == null ||
+          userProvider.homeUrlInfo?.indexUrl == null) {
+        context.go('/platform-select');
+      }
+    });
   }
 
   Future<void> _goBack(BuildContext context) async {
@@ -54,105 +69,139 @@ class _WebHomePageState extends State<WebHomePage> {
 
   void _goHome(BuildContext context) {
     final userProvider = context.read<UserProvider>();
-    final homeUrlInfo = userProvider.getHomeUrlInfo();
-    print('homeUrlInfo: $homeUrlInfo');
+    final homeUrlInfo = userProvider.homeUrlInfo;
+    print('_goHome: homeUrlInfo: $homeUrlInfo');
+    print(
+        '_goHome: userProvider.hasHomeUrlInfo: ${userProvider.hasHomeUrlInfo}');
+
     if (homeUrlInfo != null &&
         homeUrlInfo.indexUrl != null &&
         homeUrlInfo.indexUrl!.isNotEmpty) {
+      print('_goHome: 跳转到主页URL: ${homeUrlInfo.indexUrl}');
       // 重新加载主页URL - 通过导航到新的页面来实现
       context.go(
           '/web-home?url=${Uri.encodeComponent(homeUrlInfo.indexUrl!)}&isHome=true');
     } else {
-      context.go('/platform-home');
+      print('_goHome: 跳转到平台选择页');
+      context.go('/platform-select');
     }
   }
 
   void _showMoreMenu(BuildContext context) {
-    showModalBottomSheet(
+    showGeneralDialog(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.refresh),
-              title: const Text('刷新'),
-              onTap: () {
-                Navigator.of(context).pop();
-                // 重新加载页面
-                context.go(
-                    '/web-home?url=${Uri.encodeComponent(widget.url ?? 'https://example.com')}&isHome=${widget.isHome}');
-              },
+      barrierDismissible: true,
+      barrierLabel: "Menu",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: 0.8,
+            heightFactor: 1.0,
+            child: Material(
+              color: Colors.white,
+              elevation: 16,
+              child: AppDrawerMenu(
+                onSwitchSystem: () {},
+                onContacts: () {
+                  context.push('/contacts');
+                },
+                onAuth: () {
+                  context.push('/real-name-auth');
+                },
+                onFaceCollect: () {
+                  context.push('/face-collection');
+                },
+                onShare: () {
+                  context.push('/app-share');
+                },
+                onAbout: () {
+                  context.push('/about-app');
+                },
+                onLogout: () async {
+                  Navigator.of(context).pop();
+                  final userProvider = context.read<UserProvider>();
+                  await userProvider.logout();
+                  if (mounted) {
+                    context.go('/verification-login');
+                  }
+                },
+                onClearCache: () {},
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('返回主页'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _goHome(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('设置'),
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push('/settings');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('退出登录'),
-              onTap: () async {
-                Navigator.of(context).pop();
-                final userProvider = context.read<UserProvider>();
-                await userProvider.logout();
-                if (mounted) {
-                  // ignore: use_build_context_synchronously
-                  context.go('/verification-login');
-                }
-              },
-            ),
-          ],
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final offsetAnimation = Tween<Offset>(
+          begin: const Offset(-1, 0),
+          end: Offset.zero,
+        ).animate(animation);
+        return SlideTransition(
+          position: offsetAnimation,
+          child: child,
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        final userProvider = context.read<UserProvider>();
+        await userProvider.restorePreviousHomeUrlInfo();
+        return true;
+      },
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: NavigationBarWidget(
+            key: _navKey,
+            title: _currentTitle,
+            showBack: !widget.isHome, // 主页不显示返回按钮
+            backgroundColor: Colors.white,
+            titleColor: Colors.black87,
+            itemColor: Colors.black87,
+            onBack: _goBack,
+            onHome: _goHome,
+            onMore: _showMoreMenu,
+            onScan: (context) {
+              context.push('/scan');
+            },
+            onMessage: (context) {
+              context.push('/im-messages');
+            },
+          ),
+        ),
+        body: _WebViewWithNavigation(
+          url: widget.url ?? 'https://example.com',
+          title: _currentTitle,
+          navKey: _navKey,
+          onPageStarted: (url) {
+            // 页面开始加载时的处理
+          },
+          onPageFinished: (url) {
+            // 页面加载完成时的处理
+          },
+          onNavigationRequest: (url) {
+            // 导航请求处理
+          },
+          webViewController: _webViewController,
         ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: NavigationBarWidget(
-          key: _navKey,
-          title: _currentTitle,
-          showBack: !widget.isHome, // 主页不显示返回按钮
-          backgroundColor: Colors.white,
-          titleColor: Colors.black87,
-          itemColor: Colors.black87,
-          onBack: _goBack,
-          onHome: _goHome,
-          onMore: _showMoreMenu,
-        ),
-      ),
-      body: _WebViewWithNavigation(
-        url: widget.url ?? 'https://example.com',
-        title: _currentTitle,
-        navKey: _navKey,
-        onPageStarted: (url) {
-          // 页面开始加载时的处理
-        },
-        onPageFinished: (url) {
-          // 页面加载完成时的处理
-        },
-        onNavigationRequest: (url) {
-          // 导航请求处理
-        },
-        webViewController: _webViewController,
-      ),
-    );
+  void didUpdateWidget(covariant WebHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.url != oldWidget.url) {
+      // 页面url变化，重置头部
+      _navKey.currentState?.resetNavigation();
+    }
   }
 }
 

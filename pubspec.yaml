@@ -46,7 +46,7 @@ dependencies:
   http: ^1.1.0
   
   # 本地存储
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.5.3
   
   # WebView
   webview_flutter: ^4.7.0
@@ -67,7 +67,7 @@ dependencies:
   qr_flutter: ^4.1.0
   
   # 权限管理
-  permission_handler: ^11.3.1
+  permission_handler: ^11.3.0
   
   # 相机
   camera: ^0.11.0+1
@@ -102,6 +102,11 @@ dependencies:
   
   # 包管理器
   package_info_plus: ^8.0.2
+
+  # 二维码扫描
+  qr_code_scanner: ^1.0.1
+  # 或者
+  # mobile_scanner: ^3.2.0
 
 dev_dependencies:
   flutter_test:

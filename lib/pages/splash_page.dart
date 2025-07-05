@@ -37,7 +37,14 @@ class _SplashPageState extends State<SplashPage> {
       if (userProvider.isLoggedIn) {
         print('SplashPage._initializeApp: 用户已登录，使用NavigationUtils进行跳转');
         // 使用NavigationUtils进行登录成功后的跳转
-        NavigationUtils.jumpMainBridgeActivity(context);
+        try {
+          await NavigationUtils.jumpMainBridgeActivity(context);
+        } catch (e) {
+          print('SplashPage: 跳转主页面异常: $e');
+          if (mounted) {
+            context.go('/verification-login');
+          }
+        }
       } else {
         print('SplashPage._initializeApp: 用户未登录，跳转到登录页');
         context.go('/verification-login');

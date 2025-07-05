@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../theme/app_theme.dart';
 import '../../api/auth_api.dart';
+import '../../utils/navigation_utils.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -98,7 +99,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (mounted) {
         Fluttertoast.showToast(msg: '注册成功');
-        context.go('/home');
+        // 使用NavigationUtils进行注册成功后的跳转
+        NavigationUtils.jumpMainBridgeActivity(context);
       }
     } catch (e) {
       if (mounted) {
